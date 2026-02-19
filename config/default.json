@@ -1,0 +1,57 @@
+{
+  "simulation": {
+    "tickInterval": 10000,
+    "timePerTick": 10,
+    "autoSaveInterval": 30,
+    "maxLogEntries": 200,
+    "maxBatchSize": 6,
+    "decisionCooldown": 2,
+    "reflectionChance": 0.02
+  },
+  "llm": {
+    "maxTokens": 1024,
+    "temperature": 0.7,
+    "timeout": 30000,
+    "maxRetries": 3,
+    "rateLimit": 10
+  },
+  "world": {
+    "gridWidth": 60,
+    "gridHeight": 40,
+    "tileSize": 16,
+    "renderScale": 2
+  },
+  "needs": {
+    "decayRates": {
+      "hunger": 0.15,
+      "energy": 0.10,
+      "social": 0.05,
+      "fun": 0.08,
+      "hygiene": 0.03
+    },
+    "criticalThresholds": {
+      "hunger": 8,
+      "energy": 9
+    },
+    "recoveryRates": {
+      "eat": { "hunger": -2.0 },
+      "sleep": { "energy": -0.5 },
+      "chat": { "social": -0.3 },
+      "drink": { "fun": -0.2, "social": -0.1 },
+      "relax": { "fun": -0.15 },
+      "pray": { "fun": -0.1 },
+      "play": { "fun": -0.25 },
+      "comfort": { "social": -0.2 },
+      "gossip": { "social": -0.2, "fun": -0.1 },
+      "dance": { "fun": -0.3, "social": -0.2 },
+      "sing": { "fun": -0.2 },
+      "celebrate": { "fun": -0.3, "social": -0.3 },
+      "fish": { "fun": -0.15 },
+      "garden": { "fun": -0.1 },
+      "stargaze": { "fun": -0.15 },
+      "craft": { "fun": -0.1 },
+      "explore": { "fun": -0.2 },
+      "perform": { "fun": -0.2, "social": -0.15 }
+    }
+  }
+}

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Willowbrook - TownSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Silkscreen&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div class="topbar-left">
+        <span class="town-icon">&#x1F333;</span>
+        <span class="town-name">Willowbrook</span>
+      </div>
+      <div class="topbar-center">
+        <span class="day-display" id="day-display">Day 1</span>
+        <span class="time-display" id="time-display">06:00</span>
+        <span class="phase-display" id="phase-display">Morning</span>
+        <span class="phase-dot" id="phase-dot"></span>
+        <span class="connection-dot connected" id="connection-dot" title="Connected"></span>
+      </div>
+      <div class="topbar-right">
+        <div class="speed-group" id="controls">
+          <button class="speed-btn pause" id="btn-pause" title="Pause">| |</button>
+          <button class="speed-btn active" id="btn-1x" title="Normal speed">&gt;</button>
+          <button class="speed-btn" id="btn-2x" title="Fast">&gt;&gt;</button>
+          <button class="speed-btn" id="btn-5x" title="Fastest">&gt;&gt;&gt;</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN VIEWPORT -->
+    <div id="main">
+      <!-- Full-screen canvas -->
+      <div id="canvas-container">
+        <canvas id="bg-canvas"></canvas>
+        <canvas id="fg-canvas"></canvas>
+      </div>
+
+      <!-- Toast notifications -->
+      <div class="toast-stack" id="toast-stack"></div>
+
+      <!-- Character Tray (bottom-left) -->
+      <div class="floating-panel" id="character-tray">
+        <div class="panel-handle" id="char-tray-handle">
+          <span class="panel-title">Townsfolk</span>
+          <span class="panel-badge" id="char-count">12</span>
+          <span class="collapse-icon">&#x25BC;</span>
+        </div>
+        <div class="panel-body">
+          <!-- Roster mode -->
+          <div id="char-roster" class="char-roster"></div>
+          <!-- Detail mode (hidden by default) -->
+          <div id="char-detail" class="char-detail-card" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Event Feed (bottom-right) -->
+      <div class="floating-panel" id="event-feed">
+        <div class="panel-handle" id="event-feed-handle">
+          <span class="panel-title">Happenings</span>
+          <span class="collapse-icon">&#x25BC;</span>
+        </div>
+        <div class="panel-body">
+          <div class="event-filter-bar">
+            <button class="event-filter-btn active" data-filter="all">All</button>
+            <button class="event-filter-btn" data-filter="drama">Drama</button>
+            <button class="event-filter-btn" data-filter="social">Social</button>
+            <button class="event-filter-btn" data-filter="speech">Speech</button>
+          </div>
+          <div class="event-list" id="event-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Story Timeline Overlay (hidden by default) -->
+  <div class="story-timeline-overlay" id="story-overlay" style="display:none;">
+    <div class="story-timeline-content">
+      <div class="story-timeline-header">
+        <span class="story-timeline-title">The Story So Far</span>
+        <button class="story-close-btn" id="story-close">&times;</button>
+      </div>
+      <div id="story-moments"></div>
+    </div>
+  </div>
+
+  <script src="js/camera.js"></script>
+  <script src="js/interpolation.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

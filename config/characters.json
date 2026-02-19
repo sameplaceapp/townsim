@@ -1,0 +1,47 @@
+{
+  "traitAbbreviations": {
+    "cheerful": "chf",
+    "grumpy": "grm",
+    "hardworking": "hw",
+    "lazy": "lzy",
+    "kind": "knd",
+    "gossip": "gsp",
+    "quiet": "qut",
+    "flirtatious": "flt",
+    "devout": "dvt",
+    "adventurous": "adv",
+    "cautious": "cts",
+    "artistic": "art",
+    "practical": "prc",
+    "ambitious": "amb",
+    "humble": "hum"
+  },
+  "characters": [
+    { "id": "alice", "name": "Alice", "job": "baker", "personality": ["cheerful", "hardworking", "gossip"], "home": "alice_house", "workplace": "bakery", "color": "#e8a0a0" },
+    { "id": "bob", "name": "Bob", "job": "blacksmith", "personality": ["quiet", "hardworking", "kind"], "home": "bob_house", "workplace": "smithy", "color": "#7090c0" },
+    { "id": "carol", "name": "Carol", "job": "herbalist", "personality": ["kind", "cautious", "devout"], "home": "carol_house", "workplace": "herb_shop", "color": "#70b870" },
+    { "id": "dave", "name": "Dave", "job": "shopkeeper", "personality": ["grumpy", "practical", "gossip"], "home": "dave_house", "workplace": "general_store", "color": "#c0a050" },
+    { "id": "emma", "name": "Emma", "job": "barmaid", "personality": ["cheerful", "flirtatious", "adventurous"], "home": "emma_house", "workplace": "tavern", "color": "#d070a0" },
+    { "id": "frank", "name": "Frank", "job": "farmer", "personality": ["hardworking", "humble", "quiet"], "home": "frank_house", "workplace": "farm", "color": "#80a060" },
+    { "id": "grace", "name": "Grace", "job": "priest", "personality": ["devout", "kind", "cautious"], "home": "grace_house", "workplace": "church", "color": "#a0a0d0" },
+    { "id": "henry", "name": "Henry", "job": "carpenter", "personality": ["practical", "ambitious", "grumpy"], "home": "henry_house", "workplace": "workshop", "color": "#b08050" },
+    { "id": "ivy", "name": "Ivy", "job": "artist", "personality": ["artistic", "adventurous", "flirtatious"], "home": "ivy_house", "workplace": "park", "color": "#c070d0" },
+    { "id": "jack", "name": "Jack", "job": "guard", "personality": ["cautious", "quiet", "practical"], "home": "jack_house", "workplace": "guardpost", "color": "#707070" },
+    { "id": "kate", "name": "Kate", "job": "teacher", "personality": ["kind", "hardworking", "ambitious"], "home": "kate_house", "workplace": "school", "color": "#d0a070" },
+    { "id": "leo", "name": "Leo", "job": "fisherman", "personality": ["lazy", "cheerful", "adventurous"], "home": "leo_house", "workplace": "docks", "color": "#60a0c0" }
+  ],
+  "initialRelationships": [
+    { "a": "alice", "b": "bob", "level": 6, "tag": "friend" },
+    { "a": "alice", "b": "carol", "level": 3, "tag": "acquaintance" },
+    { "a": "alice", "b": "emma", "level": 5, "tag": "friend" },
+    { "a": "emma", "b": "dave", "level": 2, "tag": "tense" },
+    { "a": "grace", "b": "carol", "level": 7, "tag": "close_friend" },
+    { "a": "ivy", "b": "henry", "level": 4, "tag": "colleague" },
+    { "a": "bob", "b": "henry", "level": 5, "tag": "colleague" },
+    { "a": "frank", "b": "alice", "level": 4, "tag": "supplier" },
+    { "a": "jack", "b": "emma", "level": 3, "tag": "acquaintance" },
+    { "a": "kate", "b": "grace", "level": 6, "tag": "friend" },
+    { "a": "leo", "b": "frank", "level": 4, "tag": "neighbor" },
+    { "a": "dave", "b": "frank", "level": 5, "tag": "trade_partner" }
+  ]
+}
