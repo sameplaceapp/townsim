@@ -54,11 +54,11 @@ class UI {
     }
 
     const phaseNames = {
-      dawn: 'Dawn',
-      morning: 'Morning',
-      afternoon: 'Afternoon',
-      evening: 'Evening',
-      night: 'Night'
+      dawn: '🌅 Dawn',
+      morning: '☀️ Morning',
+      afternoon: '🌤️ Afternoon',
+      evening: '🌇 Evening',
+      night: '🌙 Night'
     };
     this.phaseDisplayEl.textContent = phaseNames[phase] || phase;
 

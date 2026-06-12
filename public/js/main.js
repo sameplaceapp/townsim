@@ -1,24 +1,36 @@
 (function () {
   const TILE_SIZE = 16;
-  const SCALE = 2;
+  const INITIAL_ZOOM = 2.5;
 
   // State
   let worldState = null;
   let characters = [];
   let currentTick = 0;
   let phase = 'morning';
+  let clock = { day: 1, hour: 6, minute: 0 };
   let followTargetId = null;
   let previousActivities = {};
+
+  // ?hour=21.5 overrides the visual time of day (for previewing lighting)
+  const debugHourParam = new URLSearchParams(location.search).get('hour');
+  const debugHour = debugHourParam !== null ? parseFloat(debugHourParam) : null;
 
   // Components
   const bgCanvas = document.getElementById('bg-canvas');
   const fgCanvas = document.getElementById('fg-canvas');
   const container = document.getElementById('canvas-container');
 
-  const camera = new Camera(60, 40, TILE_SIZE, SCALE);
-  const renderer = new Renderer(bgCanvas, fgCanvas, camera, TILE_SIZE, SCALE);
+  const camera = new Camera(60, 40, TILE_SIZE, INITIAL_ZOOM);
+  const renderer = new Renderer(bgCanvas, fgCanvas, camera, TILE_SIZE);
   const interpolator = new Interpolator(10000);
   const ui = new UI();
+
+  function parseClock(timeString) {
+    const m = /Day\s+(\d+)\s+(\d+):(\d+)/.exec(timeString || '');
+    if (m) {
+      clock = { day: +m[1], hour: +m[2], minute: +m[3] };
+    }
+  }
 
   // Selection handler (shared between canvas click and list click)
   function selectCharById(charId) {
@@ -109,10 +121,10 @@
     document.getElementById(id).classList.add('active');
   }
 
-  // Resize handler
+  // Resize handler (high-DPI aware)
   function handleResize() {
     const rect = container.getBoundingClientRect();
-    renderer.resize(rect.width, rect.height);
+    renderer.resize(rect.width, rect.height, window.devicePixelRatio || 1);
   }
   window.addEventListener('resize', handleResize);
 
@@ -130,6 +142,7 @@
       if (data.type === 'tick') {
         currentTick = data.tick;
         phase = data.phase;
+        parseClock(data.timeString);
 
         // Update character positions
         if (data.characters) {
@@ -179,19 +192,11 @@
       worldState = await resp.json();
 
       // Set world data for renderer
-      renderer.setWorldData(
-        worldState.grid,
-        worldState.buildings,
-        {
-          "0": { color: "#4a8c3f" }, "1": { color: "#c4a862" },
-          "2": { color: "#3b7dd8" }, "3": { color: "#7c6850" },
-          "4": { color: "#b89a6a" }, "5": { color: "#8b5e3c" },
-          "6": { color: "#2d6b2e" }, "7": { color: "#9c7c4c" },
-          "8": { color: "#a0522d" }, "9": { color: "#d4a0d4" },
-          "10": { color: "#e8d5a3" }, "11": { color: "#6db33f" },
-          "12": { color: "#8b7355" }
-        }
+      camera.setWorldSize(
+        worldState.gridWidth || worldState.grid[0].length,
+        worldState.gridHeight || worldState.grid.length
       );
+      renderer.setWorldData(worldState.grid, worldState.buildings);
 
       // Pass buildings to UI for name lookups
       ui.setBuildings(worldState.buildings);
@@ -200,6 +205,7 @@
       characters = worldState.characters || [];
       currentTick = worldState.tick || 0;
       phase = worldState.phase || 'morning';
+      if (worldState.time) clock = { ...worldState.time };
       interpolator.onTick(characters);
 
       // Initialize activity tracking
@@ -229,8 +235,6 @@
   }
 
   // Game loop
-  let lastCameraX = -1, lastCameraY = -1;
-
   function gameLoop() {
     // Process keyboard input
     input.update();
@@ -241,7 +245,7 @@
       if (char) {
         const pos = interpolator.getPosition(char.id) || char.pos;
         if (pos) {
-          camera.centerOn(pos.x, pos.y);
+          camera.centerOn(pos.x + 0.5, pos.y + 0.5);
         }
       }
     }
@@ -249,17 +253,14 @@
     // Update camera
     camera.update();
 
-    // Redraw background if camera moved
-    if (Math.abs(camera.x - lastCameraX) > 0.5 || Math.abs(camera.y - lastCameraY) > 0.5) {
-      renderer.markDirty();
-      lastCameraX = camera.x;
-      lastCameraY = camera.y;
-    }
-
-    // Render
-    renderer.renderBackground();
+    // Render passes: world, characters, atmosphere (day/night + lights),
+    // then labels and bubbles above the tint so they stay readable at night
+    const now = Date.now();
+    const timeOfDay = debugHour !== null ? debugHour : clock.hour + clock.minute / 60;
+    renderer.renderWorld(now);
     renderer.renderCharacters(characters, interpolator, currentTick);
-    renderer.renderDayNightOverlay(phase);
+    renderer.renderAtmosphere(timeOfDay, now);
+    renderer.renderLabels(characters, interpolator, currentTick);
 
     requestAnimationFrame(gameLoop);
   }

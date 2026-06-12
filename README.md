@@ -39,7 +39,7 @@ You watch it unfold like a soap opera you can't stop watching.
 
 **Token-Optimized LLM** -- Compressed prompt format (~50 tokens per character query), batched decisions (up to 6 per API call), situation caching, and rule-based fallbacks. Runs affordably on free/cheap models.
 
-**Visual** -- Warm "Storybook Village" aesthetic with parchment UI, floating translucent panels, toast notifications for dramatic events, and smooth pixel-art rendering with day/night cycle.
+**Visual** -- A hand-crafted procedural pixel-art world: timber-framed cottages with shaded roofs, glowing windows, and chimney smoke; a cobblestone town square with an animated fountain; a pier and bobbing rowboat on the lake; forests, crops, and flower beds. Smooth day/night color grading with street lamps, firefly-filled nights, drifting cloud shadows, and sparkling water. Characters are animated pixel sprites with hair, outfits, and job hats (guard helmets, straw hats, baker's toques), plus speech bubbles and emoji reactions. Mouse-wheel zoom lets you swoop from a town overview down to a single conversation.
 
 ## Quick Start
 
@@ -121,6 +121,8 @@ Leave `LLM_BASE_URL` empty. Characters will still follow schedules, satisfy need
 | Click character | Select and view details |
 | Drag canvas | Pan the camera |
 | `W/A/S/D` | Pan camera |
+| Mouse wheel / pinch | Zoom in and out (toward cursor) |
+| `+` / `-` | Zoom in and out |
 
 ## Architecture
 

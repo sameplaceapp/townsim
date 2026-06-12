@@ -1,9 +1,11 @@
 class Camera {
-  constructor(worldWidth, worldHeight, tileSize, scale) {
-    this.worldWidth = worldWidth * tileSize * scale;
-    this.worldHeight = worldHeight * tileSize * scale;
+  constructor(tilesW, tilesH, tileSize, zoom = 2.5) {
+    this.tilesW = tilesW;
+    this.tilesH = tilesH;
     this.tileSize = tileSize;
-    this.scale = scale;
+    this.zoom = zoom;
+    this.minZoom = 1.4;
+    this.maxZoom = 6;
     this.x = 0;
     this.y = 0;
     this.viewWidth = 0;
@@ -11,19 +13,35 @@ class Camera {
     this.targetX = 0;
     this.targetY = 0;
     this.lerp = 0.15;
-    this.dirty = true;
+  }
+
+  get ts() {
+    return this.tileSize * this.zoom;
+  }
+
+  get worldWidth() {
+    return this.tilesW * this.ts;
+  }
+
+  get worldHeight() {
+    return this.tilesH * this.ts;
+  }
+
+  setWorldSize(tilesW, tilesH) {
+    this.tilesW = tilesW;
+    this.tilesH = tilesH;
   }
 
   setViewSize(width, height) {
     this.viewWidth = width;
     this.viewHeight = height;
-    // Center on town initially
     this.x = (this.worldWidth - width) / 2;
     this.y = (this.worldHeight - height) / 2;
     this.targetX = this.x;
     this.targetY = this.y;
     this.clamp();
-    this.dirty = true;
+    this.targetX = this.x;
+    this.targetY = this.y;
   }
 
   move(dx, dy) {
@@ -33,11 +51,24 @@ class Camera {
   }
 
   centerOn(worldX, worldY) {
-    const px = worldX * this.tileSize * this.scale;
-    const py = worldY * this.tileSize * this.scale;
-    this.targetX = px - this.viewWidth / 2;
-    this.targetY = py - this.viewHeight / 2;
+    this.targetX = worldX * this.ts - this.viewWidth / 2;
+    this.targetY = worldY * this.ts - this.viewHeight / 2;
     this.clampTarget();
+  }
+
+  // Zoom by a factor, keeping the world point under (anchorX, anchorY) fixed
+  zoomAt(factor, anchorX, anchorY) {
+    const oldTs = this.ts;
+    const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
+    if (newZoom === this.zoom) return;
+    const wx = (this.x + anchorX) / oldTs;
+    const wy = (this.y + anchorY) / oldTs;
+    this.zoom = newZoom;
+    this.x = wx * this.ts - anchorX;
+    this.y = wy * this.ts - anchorY;
+    this.clamp();
+    this.targetX = this.x;
+    this.targetY = this.y;
   }
 
   update() {
@@ -47,41 +78,45 @@ class Camera {
       this.x += dx * this.lerp;
       this.y += dy * this.lerp;
       this.clamp();
-      this.dirty = true;
-    } else if (this.x !== this.targetX || this.y !== this.targetY) {
+    } else {
       this.x = this.targetX;
       this.y = this.targetY;
-      this.dirty = true;
     }
   }
 
+  // Clamp to world bounds; center the world when it is smaller than the view
+  clampAxis(v, world, view) {
+    if (world <= view) return (world - view) / 2;
+    return Math.max(0, Math.min(world - view, v));
+  }
+
   clamp() {
-    this.x = Math.max(0, Math.min(this.worldWidth - this.viewWidth, this.x));
-    this.y = Math.max(0, Math.min(this.worldHeight - this.viewHeight, this.y));
+    this.x = this.clampAxis(this.x, this.worldWidth, this.viewWidth);
+    this.y = this.clampAxis(this.y, this.worldHeight, this.viewHeight);
   }
 
   clampTarget() {
-    this.targetX = Math.max(0, Math.min(this.worldWidth - this.viewWidth, this.targetX));
-    this.targetY = Math.max(0, Math.min(this.worldHeight - this.viewHeight, this.targetY));
+    this.targetX = this.clampAxis(this.targetX, this.worldWidth, this.viewWidth);
+    this.targetY = this.clampAxis(this.targetY, this.worldHeight, this.viewHeight);
   }
 
   screenToWorld(screenX, screenY) {
-    const wx = (screenX + this.x) / (this.tileSize * this.scale);
-    const wy = (screenY + this.y) / (this.tileSize * this.scale);
-    return { x: Math.floor(wx), y: Math.floor(wy) };
+    return {
+      x: Math.floor((screenX + this.x) / this.ts),
+      y: Math.floor((screenY + this.y) / this.ts)
+    };
   }
 
   worldToScreen(worldX, worldY) {
     return {
-      x: worldX * this.tileSize * this.scale - this.x,
-      y: worldY * this.tileSize * this.scale - this.y
+      x: worldX * this.ts - this.x,
+      y: worldY * this.ts - this.y
     };
   }
 
   isVisible(worldX, worldY) {
     const screen = this.worldToScreen(worldX, worldY);
-    const ts = this.tileSize * this.scale;
-    return screen.x > -ts && screen.x < this.viewWidth + ts &&
-           screen.y > -ts && screen.y < this.viewHeight + ts;
+    return screen.x > -this.ts && screen.x < this.viewWidth + this.ts &&
+           screen.y > -this.ts && screen.y < this.viewHeight + this.ts;
   }
 }

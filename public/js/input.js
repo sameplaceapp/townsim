@@ -59,11 +59,10 @@ class InputHandler {
 
   onWheel(e) {
     e.preventDefault();
-    this.camera.move(e.deltaX, e.deltaY);
-    // Break follow mode on wheel pan
-    if (this.onManualPan) {
-      this.onManualPan();
-    }
+    // Wheel / pinch zooms toward the cursor; drag to pan
+    const rect = this.container.getBoundingClientRect();
+    const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018));
+    this.camera.zoomAt(factor, e.clientX - rect.left, e.clientY - rect.top);
   }
 
   onTouchStart(e) {
@@ -103,6 +102,12 @@ class InputHandler {
     if (this.keys.has('s') || this.keys.has('arrowdown')) { this.camera.move(0, speed); moved = true; }
     if (this.keys.has('a') || this.keys.has('arrowleft')) { this.camera.move(-speed, 0); moved = true; }
     if (this.keys.has('d') || this.keys.has('arrowright')) { this.camera.move(speed, 0); moved = true; }
+    if (this.keys.has('=') || this.keys.has('+')) {
+      this.camera.zoomAt(1.04, this.camera.viewWidth / 2, this.camera.viewHeight / 2);
+    }
+    if (this.keys.has('-') || this.keys.has('_')) {
+      this.camera.zoomAt(1 / 1.04, this.camera.viewWidth / 2, this.camera.viewHeight / 2);
+    }
     // Break follow mode on WASD/arrow pan
     if (moved && this.onManualPan) {
       this.onManualPan();

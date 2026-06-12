@@ -226,6 +226,7 @@ body {
   position: absolute;
   inset: 0;
   cursor: grab;
+  background: radial-gradient(ellipse at center, #33502f 0%, #1f3320 100%);
 }
 #canvas-container:active {
   cursor: grabbing;
@@ -235,12 +236,20 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 #fg-canvas {
   pointer-events: none;
+}
+
+/* Soft vignette over the world (under the floating panels) */
+#main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 140px rgba(15, 25, 10, 0.4);
+  z-index: 10;
 }
 
 /* ============================================================
