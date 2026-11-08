@@ -12,7 +12,7 @@ Prioritize maintainability, low resource consumption, and incremental developmen
 
 For every approved implementation task, follow this workflow:
 
-1. Start from the latest approved `main` branch of the project owner's GitHub fork.
+1. Start from the latest approved `dev` branch of the project owner's GitHub fork.
 2. Create a dedicated feature branch before modifying application code. If the Codex environment already provides an isolated task branch, use that branch instead of creating an unnecessary duplicate.
 3. Use descriptive branch names, such as:
    - `feature/world-history`
@@ -23,11 +23,11 @@ For every approved implementation task, follow this workflow:
 5. Run relevant automated tests and address failures introduced by the changes.
 6. Commit the completed changes to the feature branch with a descriptive commit message.
 7. Publish or push the feature branch to the project owner's GitHub fork using the available GitHub integration.
-8. Create a GitHub pull request with the feature branch as the source and the fork's `main` branch as the target.
+8. Create a GitHub pull request with the feature branch as the source and the fork's `dev` branch as the target.
 9. Mark the work ready for the project owner's manual testing.
 10. Stop and wait for the project owner to test and manually merge the pull request.
 
-**Never commit feature changes directly to `main`. Never automatically merge a pull request. Never automatically begin the next feature.**
+**Never commit feature changes directly to `dev`. Never automatically merge a pull request. Never automatically begin the next feature.**
 
 Do not create pull requests against the original upstream TownSim repository.
 
@@ -98,14 +98,14 @@ The project owner has final authority over all merges and deployments.
 Codex must never:
 
 - Merge a pull request without explicit authorization.
-- Push feature changes directly to `main`.
+- Push feature changes directly to `dev`.
 - Deploy to production without authorization.
 - Delete persistent simulation data without authorization.
 - Begin the next development milestone before approval.
 
 If manual testing reveals a problem, fix it on the same feature branch and update the existing pull request.
 
-Once the project owner merges the pull request, the next approved feature must begin from the updated `main` branch.
+Once the project owner merges the pull request, the next approved feature must begin from the updated `dev` branch.
 
 ## 6. Hosting and Resource Constraints
 
