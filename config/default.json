@@ -1,8 +1,10 @@
 {
   "simulation": {
-    "tickInterval": 10000,
+    "tickInterval": 50000,
+    "movementInterval": 6666.666666666667,
+    "minuteInterval": 5000,
     "timePerTick": 10,
-    "autoSaveInterval": 30,
+    "autoSaveInterval": 6,
     "maxLogEntries": 200,
     "maxBatchSize": 6,
     "decisionCooldown": 2,
