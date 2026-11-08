@@ -2,6 +2,7 @@ const { LLMClient } = require('./client');
 const { PromptBuilder } = require('./promptBuilder');
 const { ResponseParser } = require('./responseParser');
 const { DecisionCache } = require('./cache');
+const { RequestBudget } = require('./budget');
 
 class LLMBatcher {
   constructor(config, world, stats) {
@@ -9,11 +10,40 @@ class LLMBatcher {
     this.world = world;
     this.stats = stats;
     this.maxBatchSize = config.simulation.maxBatchSize;
-    this.client = new LLMClient(config);
+    this.budget = new RequestBudget();
+    this.client = new LLMClient(config, this.budget);
+    this.inFlight = false;
+    this.cooldownUntil = 0;
     this.promptBuilder = new PromptBuilder();
     this.parser = new ResponseParser();
     this.cache = new DecisionCache();
     this.enabled = !!(process.env.LLM_BASE_URL);
+  }
+
+  decide(decisions) {
+    // Decisions always complete locally. A single background request can populate
+    // the existing short-lived cache for a later matching situation.
+    const results = decisions.map(d => ({ character: d.character,
+      ...(this.cache.get(d.character, this.world) || this.generateFallback(d.character)) }));
+    const meaningful = decisions.filter(d => d.reason === 'encounter' && !this.cache.get(d.character, this.world));
+    if (this.enabled && meaningful.length && !this.inFlight && Date.now() >= this.cooldownUntil && this.budget.available()) {
+      this.inFlight = true;
+      this.processSingleBatch(meaningful.slice(0, this.maxBatchSize))
+        .catch(err => console.warn('Background AI decision failed:', err.message))
+        .finally(() => { this.inFlight = false; });
+    }
+    return results;
+  }
+
+  status() {
+    const budget = this.budget.status();
+    let reason = null;
+    if (!this.enabled) reason = 'No AI provider configured';
+    else if (budget.error) reason = 'AI budget unavailable';
+    else if (!budget.limit) reason = 'AI disabled by daily limit';
+    else if (!this.budget.available()) reason = 'Daily AI limit reached';
+    else if (Date.now() < this.cooldownUntil) reason = 'AI provider cooling down';
+    return { ...budget, enabled: this.enabled, cooldownUntil: this.cooldownUntil, fallbackReason: reason };
   }
 
   async processBatch(decisions) {
@@ -50,10 +80,13 @@ class LLMBatcher {
   }
 
   async processSingleBatch(decisions) {
+    const requestTick = this.world.tick;
+    const keys = decisions.map(d => this.cache.getKey(d.character, this.world));
     const prompt = this.promptBuilder.buildBatch(decisions, this.world);
     const response = await this.client.complete(prompt.system, prompt.user);
 
     if (!response) {
+      this.cooldownUntil = Date.now() + 60000;
       // LLM failed - use fallbacks
       return decisions.map(d => ({
         character: d.character,
@@ -66,6 +99,8 @@ class LLMBatcher {
     this.stats.llmTokensIn += response.tokensIn;
     this.stats.llmTokensOut += response.tokensOut;
 
+    if (this.world.tick - requestTick > this.cache.maxAge) return [];
+
     const parsed = this.parser.parse(response.content, decisions.length);
     const results = [];
 
@@ -75,7 +110,7 @@ class LLMBatcher {
 
       if (p) {
         const result = { action: p.action, say: p.say, think: p.think, emotion: p.emotion };
-        this.cache.set(d.character, this.world, result);
+        this.cache.setKey(keys[i], requestTick, result);
         results.push({ character: d.character, ...result });
       } else {
         results.push({
