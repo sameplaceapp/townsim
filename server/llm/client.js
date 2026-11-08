@@ -1,5 +1,6 @@
 class LLMClient {
-  constructor(config) {
+  constructor(config, budget) {
+    this.budget = budget;
     this.baseUrl = process.env.LLM_BASE_URL || 'http://localhost:11434/v1';
     this.model = process.env.LLM_MODEL || 'llama3';
     this.apiKey = process.env.LLM_API_KEY || '';
@@ -31,9 +32,11 @@ class LLMClient {
     }
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      let timeoutId;
       try {
+        if (!this.budget.reserve()) return null;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
         const response = await fetch(url, {
           method: 'POST',
@@ -42,14 +45,13 @@ class LLMClient {
           signal: controller.signal
         });
 
-        clearTimeout(timeoutId);
-
         if (!response.ok) {
           const errText = await response.text();
           throw new Error(`LLM API error ${response.status}: ${errText}`);
         }
 
         const data = await response.json();
+        clearTimeout(timeoutId);
         const content = data.choices?.[0]?.message?.content || '';
         const usage = data.usage || {};
 
@@ -59,6 +61,7 @@ class LLMClient {
           tokensOut: usage.completion_tokens || 0
         };
       } catch (err) {
+        clearTimeout(timeoutId);
         if (err.name === 'AbortError') {
           console.warn(`LLM timeout (attempt ${attempt + 1}/${this.maxRetries})`);
         } else {

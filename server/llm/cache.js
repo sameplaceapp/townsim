@@ -1,7 +1,7 @@
 class DecisionCache {
   constructor() {
     this.cache = new Map();
-    this.maxAge = 50; // ticks
+    this.maxAge = 3; // Decisions must still be relevant when reused.
     this.maxSize = 200;
   }
 
@@ -34,6 +34,10 @@ class DecisionCache {
   }
 
   set(char, world, result) {
+    this.setKey(this.getKey(char, world), world.tick, result);
+  }
+
+  setKey(key, tick, result) {
     if (this.cache.size >= this.maxSize) {
       // Remove oldest entries
       const entries = [...this.cache.entries()];
@@ -43,8 +47,7 @@ class DecisionCache {
       }
     }
 
-    const key = this.getKey(char, world);
-    this.cache.set(key, { result, tick: world.tick });
+    this.cache.set(key, { result, tick });
   }
 }
 
