@@ -1,4 +1,5 @@
 const { World } = require('./world');
+const { Character } = require('./character');
 const { NeedsManager } = require('./needs');
 const { PathFinder } = require('./pathfinding');
 const { ActionManager } = require('./actions');
@@ -193,7 +194,7 @@ class SimulationEngine {
     // 7-8. LLM batch decisions (async, non-blocking)
     if (decisions.length > 0) {
       try {
-        const results = await this.llmBatcher.processBatch(decisions);
+        const results = this.llmBatcher.decide(decisions);
         for (const result of results) {
           if (result.action) {
             // BUG-19: Validate goto targets before assigning
@@ -354,6 +355,7 @@ class SimulationEngine {
   getStats() {
     return {
       ...this.stats,
+      aiBudget: this.llmBatcher.status(),
       uptime: Date.now() - this.stats.startTime,
       paused: this.paused,
       speed: this.speed,
@@ -370,34 +372,34 @@ class SimulationEngine {
   save() {
     // Save drama state alongside world state
     const worldData = this.world.toJSON();
+    worldData.version = 1;
+    worldData.activityLog = this.world.activityLog;
+    worldData.lastScheduleHour = this.lastScheduleHour;
+    worldData.characters = this.world.characters.map(c => ({ ...c, path: [...c.path] }));
     worldData.drama = this.dramaEngine.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 
   restoreState(saved) {
-    if (saved.tick) this.world.tick = saved.tick;
+    this.world.tick = saved.tick;
+    this.lastScheduleHour = saved.lastScheduleHour ?? -1;
     if (saved.time) this.world.time = saved.time;
     if (saved.phase) this.world.phase = saved.phase;
+    if (saved.grid && saved.gridWidth && saved.gridHeight) {
+      this.world.grid = saved.grid;
+      this.world.gridWidth = saved.gridWidth;
+      this.world.gridHeight = saved.gridHeight;
+    }
+    if (saved.buildings) this.world.buildings = saved.buildings;
     if (saved.characters) {
-      for (const savedChar of saved.characters) {
-        const char = this.world.characters.find(c => c.id === savedChar.id);
-        if (char) {
-          if (savedChar.pos) char.pos = savedChar.pos;
-          if (savedChar.needs) char.needs = savedChar.needs;
-          if (savedChar.relationships) char.relationships = savedChar.relationships;
-          if (savedChar.activity) char.activity = savedChar.activity;
-          if (savedChar.activityData) char.activityData = savedChar.activityData;
-          if (savedChar.recentMemory) char.recentMemory = savedChar.recentMemory;
-          if (savedChar.mood) char.mood = savedChar.mood;
-          if (savedChar.moodHistory) char.moodHistory = savedChar.moodHistory;
-          // BUG-03: restore inside/location state
-          if (savedChar.inside !== undefined) char.inside = savedChar.inside;
-          if (savedChar.location !== undefined) char.location = savedChar.location;
-          // Clear path/walking on restore (paths can't be serialized reliably)
-          char.path = [];
-          char.walking = false;
-        }
-      }
+      this.world.characters = saved.characters.map(data => {
+        const original = this.world.characters.find(c => c.id === data.id);
+        const character = original || new Character({ ...data, personality: data.personality || [] }, data.pos || { x: 0, y: 0 });
+        Object.assign(character, data);
+        character.path = Array.isArray(data.path) ? data.path : [];
+        character.pendingDecision = false;
+        return character;
+      });
     }
     if (saved.activityLog) this.world.activityLog = saved.activityLog;
   }

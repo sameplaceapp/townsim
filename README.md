@@ -59,7 +59,7 @@ cp .env.example .env
 npm start
 ```
 
-Open http://localhost:3000
+Open http://localhost:3000 on the Docker host. Compose binds only to loopback by default. The simulation continues without a browser while the container is running.
 
 ### Run with Docker
 
@@ -76,6 +76,7 @@ docker compose up --build
 | `LLM_BASE_URL` | OpenAI-compatible API endpoint | `https://openrouter.ai/api/v1` |
 | `LLM_MODEL` | Model identifier | `nvidia/nemotron-3-nano-30b-a3b:free` |
 | `LLM_API_KEY` | API key (leave empty for local models) | `sk-...` |
+| `LLM_DAILY_LIMIT` | Maximum outgoing AI attempts per UTC day, including retries; 0 disables AI | `0` |
 | `PORT` | Server port | `3000` |
 | `NODE_ENV` | Environment | `production` |
 
@@ -103,7 +104,7 @@ LLM_API_KEY=sk-...
 ```
 
 **No LLM (rule-based fallback):**
-Leave `LLM_BASE_URL` empty. Characters will still follow schedules, satisfy needs, and have basic social interactions driven by personality and relationship data.
+Leave `LLM_BASE_URL` empty or set `LLM_DAILY_LIMIT=0` (the default). Characters will still follow schedules, satisfy needs, and have basic social interactions driven by personality and relationship data.
 
 ## Controls
 
@@ -234,3 +235,7 @@ The simulation state persists in a Docker volume (`townsim-data`). Stopping and 
 ## License
 
 MIT
+
+### World saves and AI budget
+
+World state and the AI request counter are stored in `data/` (or the Docker volume). Snapshots are written atomically with a previous backup; if both are unreadable, startup stops rather than replacing the world. Back up this data before upgrading. AI calls run in the background, use a UTC daily attempt limit, and are disabled by default. Set `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` if required, and `LLM_DAILY_LIMIT` in `.env` to enable them. The simulation uses rule-based decisions immediately; recent AI results are reused only if the situation matches. After a provider failure, requests pause for one minute. Usage and fallback status are visible in `/api/stats`.
