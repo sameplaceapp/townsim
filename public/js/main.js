@@ -8,6 +8,9 @@
   let currentTick = 0;
   let phase = 'morning';
   let clock = { day: 1, hour: 6, minute: 0 };
+  let clockTiming = { minuteProgress: 0, minuteInterval: 5000, speed: 1, paused: true };
+  let clockReceived = performance.now();
+  let displayedMinute = '';
   let followTargetId = null;
   let previousActivities = {};
 
@@ -22,7 +25,7 @@
 
   const camera = new Camera(60, 40, TILE_SIZE, INITIAL_ZOOM);
   const renderer = new Renderer(bgCanvas, fgCanvas, camera, TILE_SIZE);
-  const interpolator = new Interpolator(10000);
+  const interpolator = new Interpolator();
   const ui = new UI();
 
   function parseClock(timeString) {
@@ -143,6 +146,8 @@
         currentTick = data.tick;
         phase = data.phase;
         parseClock(data.timeString);
+        clockTiming = data.timing;
+        clockReceived = performance.now();
 
         // Update character positions
         if (data.characters) {
@@ -164,7 +169,7 @@
               previousActivities[update.id] = update.activity;
             }
           }
-          interpolator.onTick(characters);
+          interpolator.onTick(characters, data.timing);
         }
 
         // Update UI
@@ -176,6 +181,8 @@
     };
 
     ws.onclose = () => {
+      clockTiming = { ...clockTiming, paused: true };
+      interpolator.onTick(characters, clockTiming);
       ui.setStatus('Disconnected - reconnecting...');
       setTimeout(connectWebSocket, 3000);
     };
@@ -206,7 +213,9 @@
       currentTick = worldState.tick || 0;
       phase = worldState.phase || 'morning';
       if (worldState.time) clock = { ...worldState.time };
-      interpolator.onTick(characters);
+      clockTiming = worldState.timing || clockTiming;
+      clockReceived = performance.now();
+      interpolator.onTick(characters, clockTiming);
 
       // Initialize activity tracking
       for (const char of characters) {
@@ -256,11 +265,23 @@
     // Render passes: world, characters, atmosphere (day/night + lights),
     // then labels and bubbles above the tint so they stay readable at night
     const now = Date.now();
-    const timeOfDay = debugHour !== null ? debugHour : clock.hour + clock.minute / 60;
+    const elapsed = clockTiming.paused ? 0 : (performance.now() - clockReceived) * clockTiming.speed;
+    const extraMinutes = Math.floor((clockTiming.minuteProgress + elapsed) / clockTiming.minuteInterval);
+    const totalMinutes = clock.hour * 60 + clock.minute + extraMinutes;
+    const displayDay = clock.day + Math.floor(totalMinutes / 1440);
+    const displayHour = Math.floor(totalMinutes / 60) % 24;
+    const displayMinute = totalMinutes % 60;
+    const timeString = `Day ${displayDay} ${String(displayHour).padStart(2, '0')}:${String(displayMinute).padStart(2, '0')}`;
+    const displayPhase = displayHour >= 5 && displayHour < 7 ? 'dawn' : displayHour >= 7 && displayHour < 12 ? 'morning' : displayHour >= 12 && displayHour < 17 ? 'afternoon' : displayHour >= 17 && displayHour < 20 ? 'evening' : 'night';
+    if (timeString !== displayedMinute) { ui.updateTime(timeString, displayPhase); displayedMinute = timeString; }
+    const timeOfDay = debugHour !== null ? debugHour : displayHour + displayMinute / 60;
+    // Keep the sprite visible until its final interpolated step reaches the door.
+    const renderCharacters = characters.map(char => char.inside && interpolator.isMoving(char.id)
+      ? { ...char, inside: false, location: null } : char);
     renderer.renderWorld(now);
-    renderer.renderCharacters(characters, interpolator, currentTick);
+    renderer.renderCharacters(renderCharacters, interpolator, currentTick);
     renderer.renderAtmosphere(timeOfDay, now);
-    renderer.renderLabels(characters, interpolator, currentTick);
+    renderer.renderLabels(renderCharacters, interpolator, currentTick);
 
     requestAnimationFrame(gameLoop);
   }

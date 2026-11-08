@@ -174,7 +174,6 @@ class World {
   }
 
   advanceClock(timePerTick) {
-    this.tick++;
     this.time.minute += timePerTick;
     while (this.time.minute >= 60) {
       this.time.minute -= 60;

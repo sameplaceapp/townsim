@@ -136,7 +136,7 @@ townsim/
 ├── server/
 │   ├── index.js              # Express + WebSocket entry point
 │   ├── simulation/
-│   │   ├── engine.js         # Core tick loop (10s intervals)
+│   │   ├── engine.js         # Core simulation loop (50s at 1×)
 │   │   ├── world.js          # World state, grid, buildings
 │   │   ├── character.js      # Character class with needs, mood, memory
 │   │   ├── actions.js        # 35 action types + execution
@@ -174,9 +174,9 @@ townsim/
 
 ## How It Works
 
-### Tick Cycle (every 10 seconds)
+### Tick Cycle (every 50 seconds at 1×)
 
-1. Advance world clock (each tick = 10 simulated minutes)
+1. Advance the authoritative world clock continuously (one in-game minute every five seconds at 1×); the main simulation updates every ten in-game minutes
 2. Decay character needs (hunger, energy, social, fun, hygiene)
 3. Execute current actions (walk, eat, work, chat, etc.)
 4. Check critical needs -- auto-eat if starving, auto-sleep if exhausted

@@ -10,14 +10,19 @@ const { LLMBatcher } = require('../llm/batcher');
 const { StateManager } = require('../persistence/stateManager');
 
 class SimulationEngine {
-  constructor(config, wss) {
+  constructor(config, wss, now = () => performance.now()) {
+    this.now = now;
     this.config = config;
     this.wss = wss;
     this.paused = false;
     this.speed = 1;
     this.tickTimeout = null;
-    this.tickInProgress = false;
     this.lastScheduleHour = -1;
+    this.running = false;
+    this.lastUpdate = null;
+    this.minuteProgress = 0;
+    this.logicProgress = 0;
+    this.movementProgress = 0;
 
     // Stats
     this.stats = {
@@ -64,70 +69,96 @@ class SimulationEngine {
   }
 
   start() {
-    if (this.tickTimeout) return;
-    console.log(`Simulation started (speed: ${this.speed}x)`);
+    if (this.running) return;
+    this.running = true;
+    this.lastUpdate = this.now();
     this.scheduleTick();
   }
 
-  scheduleTick() {
-    const interval = this.config.simulation.tickInterval / this.speed;
-    this.tickTimeout = setTimeout(() => this.runTick(), interval);
-  }
-
-  async runTick() {
-    this.tickTimeout = null;
-    if (this.tickInProgress) return; // BUG-01: prevent overlapping ticks
-    this.tickInProgress = true;
-    try {
-      await this.tick();
-    } finally {
-      this.tickInProgress = false;
-      if (!this.paused) {
-        this.scheduleTick();
+  // All elapsed values are measured at 1x speed. Monotonic time and retained
+  // fractional progress keep pauses, speed changes and delayed timers accurate.
+  sync(now = this.now()) {
+    if (!this.running || this.paused) return;
+    let remaining = Math.max(0, now - this.lastUpdate) * this.speed;
+    this.lastUpdate = now;
+    const { tickInterval, movementInterval, minuteInterval } = this.config.simulation;
+    while (remaining > 0.000001) {
+      const step = Math.min(remaining, tickInterval - this.logicProgress,
+        movementInterval - this.movementProgress, minuteInterval - this.minuteProgress);
+      this.logicProgress += step;
+      this.movementProgress += step;
+      this.minuteProgress += step;
+      remaining -= step;
+      if (this.minuteProgress >= minuteInterval - 0.000001) {
+        this.minuteProgress = 0;
+        this.world.advanceClock(1);
+      }
+      if (this.movementProgress >= movementInterval - 0.000001) {
+        this.movementProgress = 0;
+        this.moveCharacters();
+      }
+      if (this.logicProgress >= tickInterval - 0.000001) {
+        this.logicProgress = 0;
+        this.tick();
       }
     }
   }
 
-  stop() {
-    if (this.tickTimeout) {
-      clearTimeout(this.tickTimeout);
+  scheduleTick() {
+    if (!this.running || this.paused) return;
+    const { tickInterval, movementInterval } = this.config.simulation;
+    const delay = Math.min(tickInterval - this.logicProgress, movementInterval - this.movementProgress) / this.speed;
+    this.tickTimeout = setTimeout(() => {
       this.tickTimeout = null;
-    }
+      this.sync();
+      this.broadcastState();
+      this.scheduleTick();
+    }, Math.max(1, delay));
+  }
+
+  stop() {
+    this.sync();
+    this.running = false;
+    if (this.tickTimeout) clearTimeout(this.tickTimeout);
+    this.tickTimeout = null;
   }
 
   setSpeed(speed) {
-    if (speed === 0) {
-      this.paused = true;
-      this.stop(); // BUG-20: stop the timeout on pause
-      return;
-    }
-    this.paused = false;
-    this.speed = speed;
-    this.stop();
-    this.start();
+    this.sync();
+    if (this.tickTimeout) clearTimeout(this.tickTimeout);
+    this.tickTimeout = null;
+    this.paused = speed === 0;
+    if (speed !== 0) this.speed = speed;
+    this.lastUpdate = this.now();
+    this.scheduleTick();
+    this.broadcastState();
   }
 
   togglePause() {
-    this.paused = !this.paused;
-    if (this.paused) {
-      this.stop(); // NEW-01: clear pending timeout on pause
-    } else if (!this.tickInProgress && !this.tickTimeout) {
-      this.start(); // Only reschedule if no tick is in-flight or pending
+    this.setSpeed(this.paused ? this.speed : 0);
+  }
+
+  moveCharacters() {
+    for (const char of this.world.characters) {
+      if (!char.path.length) continue;
+      const result = this.actionManager.executeAction(char);
+      if (result === 'arrived') {
+        const building = this.world.buildings[char.location];
+        this.world.addLog({ char: char.id, text: `${char.name} arrives at ${building?.name || char.location}` });
+      }
     }
   }
 
-  async tick() {
+  tick() {
     this.stats.totalTicks++;
-
-    // 1. Advance clock
-    this.world.advanceClock(this.config.simulation.timePerTick);
+    this.world.tick++;
 
     // 2. Decay needs
     this.needsManager.decayAll(this.world.characters);
 
     // 3. Execute current actions
     for (const char of this.world.characters) {
-      const result = this.actionManager.executeAction(char);
+      const result = char.path.length ? 'moving' : this.actionManager.executeAction(char);
 
       if (result === 'arrived') {
         const dest = char.location;
@@ -320,14 +351,14 @@ class SimulationEngine {
       this.save();
     }
 
-    // 11. Push state via WebSocket
-    this.broadcastState();
+
   }
 
   broadcastState() {
     if (!this.wss) return;
     const state = {
       type: 'tick',
+      timing: this.getTiming(),
       tick: this.world.tick,
       time: { ...this.world.time },
       phase: this.world.phase,
@@ -348,11 +379,18 @@ class SimulationEngine {
     this.wss.broadcast(state);
   }
 
+  getTiming() {
+    return { minuteProgress: this.minuteProgress, minuteInterval: this.config.simulation.minuteInterval,
+      movementInterval: this.config.simulation.movementInterval, speed: this.speed, paused: this.paused || !this.running };
+  }
+
   getState() {
-    return this.world.toJSON();
+    this.sync();
+    return { ...this.world.toJSON(), timing: this.getTiming() };
   }
 
   getStats() {
+    this.sync();
     return {
       ...this.stats,
       aiBudget: this.llmBatcher.status(),
@@ -375,6 +413,7 @@ class SimulationEngine {
     worldData.version = 1;
     worldData.activityLog = this.world.activityLog;
     worldData.lastScheduleHour = this.lastScheduleHour;
+    worldData.timingProgress = { minute: this.minuteProgress, logic: this.logicProgress, movement: this.movementProgress };
     worldData.characters = this.world.characters.map(c => ({ ...c, path: [...c.path] }));
     worldData.drama = this.dramaEngine.toJSON();
     this.stateManager.saveRaw(worldData);
@@ -382,6 +421,10 @@ class SimulationEngine {
 
   restoreState(saved) {
     this.world.tick = saved.tick;
+    const progress = saved.timingProgress || {};
+    this.minuteProgress = Math.max(0, Math.min(Number(progress.minute) || 0, this.config.simulation.minuteInterval - 0.001));
+    this.logicProgress = Math.max(0, Math.min(Number(progress.logic) || 0, this.config.simulation.tickInterval - 0.001));
+    this.movementProgress = Math.max(0, Math.min(Number(progress.movement) || 0, this.config.simulation.movementInterval - 0.001));
     this.lastScheduleHour = saved.lastScheduleHour ?? -1;
     if (saved.time) this.world.time = saved.time;
     if (saved.phase) this.world.phase = saved.phase;
