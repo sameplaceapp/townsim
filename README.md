@@ -31,7 +31,7 @@ You watch it unfold like a soap opera you can't stop watching.
 
 ## Features
 
-**Drama Engine** -- Tracks storylines (love triangles, rivalries, grudges, secret keepers, forbidden friendships) through lifecycle phases. Gossip propagates through the social network. Town mood cycles between peaceful and dramatic.
+**Drama Engine** -- Tracks storylines (love triangles, rivalries, grudges, secret keepers, forbidden friendships) through lifecycle phases. Stories may build toward a climax or fade quietly. Gossip propagates through the social network.
 
 **35 Action Types** -- Beyond basics (eat, sleep, work), characters can confess, comfort, confront, gossip, dance, sing, cry, laugh, celebrate, storm off, craft, fish, garden, explore, stargaze, and more.
 
@@ -203,6 +203,30 @@ Prompt format:
 [Q1]alice,baker,chf.hw.gsp|h3e7s5f4|bakery|near:bob(fr6)|mr|mood:happy|drama:crush_on_bob
 [A1]ACT:chat,bob|SAY:Morning Bob!|THINK:He looks nice today|EMO:happy
 ```
+
+### Drama pacing and quick simulation
+
+The `drama` section of `config/default.json` controls significant events without affecting routine actions:
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `eventChance` | `0.12` | Overall probability multiplier for an eligible major opportunity. |
+| `conflictFrequency` | `0.4` | Multiplier for conflict and rivalry opportunities. |
+| `romanceFrequency` | `0.5` | Multiplier for romantic opportunities. |
+| `cooldownHours` | `18` | Minimum simulated hours before a character can participate in another major development. |
+
+The first three values range from 0 to 1 and are multiplied together as appropriate; personality can adjust the result. They are probabilities per eligible opportunity, not guaranteed events per day. The cooldown uses the in-game clock, survives saves, and scales naturally with the speed controls. Existing saves without cooldown data remain compatible. Ordinary conversation, work, and needs continue with AI disabled.
+
+To inspect pacing without waiting for real-time days, run this from the project root:
+
+```bash
+node scripts/drama-sim.js . 14 10 normal
+node scripts/drama-sim.js . 14 10 social
+```
+
+These commands simulate 14 days for each of 10 fixed seeds without reading or writing your saved world or contacting an LLM. `normal` uses the starting town; `social` starts with established attraction and friction to exercise eligible opportunities. The output counts flirt, confess, argue and confront interactions, new storylines, climaxes, and days without those events. It is a repeatable diagnostic rather than a prediction for every saved town.
+
+`simulationErrors` reports caught decision-processing errors. In the reference fresh-town run, two came from an existing pathfinding edge case even though no LLM was enabled; the affected decisions fell back to idle. Movement code is unchanged by the drama-pacing feature.
 
 ## API Endpoints
 

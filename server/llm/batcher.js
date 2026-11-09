@@ -136,8 +136,11 @@ class LLMBatcher {
 
       // Dramatic interactions based on relationship
       if (rel) {
-        // High attraction: flirt
-        if (rel.attraction > 5 && Math.random() < 0.3) {
+        // A flirtatious resident may develop interest after a warm acquaintance;
+        // established attraction also creates an opportunity for anyone.
+        const warmAcquaintance = char.personality.includes('flirtatious') &&
+          rel.affection >= 6 && (rel.interactionCount || 0) >= 3;
+        if ((rel.attraction >= 3 || warmAcquaintance) && Math.random() < 0.3) {
           return {
             action: { type: 'flirt', target: target.id },
             say: null,
@@ -145,8 +148,8 @@ class LLMBatcher {
             emotion: 'infatuated'
           };
         }
-        // Low trust: argue
-        if (rel.trust < 3 && Math.random() < 0.2) {
+        // Existing tension or distrust can lead to an argument.
+        if ((rel.trust <= 3.5 || rel.affection <= 3.5) && Math.random() < 0.2) {
           return {
             action: { type: 'argue', target: target.id },
             say: null,
