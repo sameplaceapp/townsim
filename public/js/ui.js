@@ -10,6 +10,9 @@ class UI {
     this.phaseDisplayEl = document.getElementById('phase-display');
     this.phaseDotEl = document.getElementById('phase-dot');
     this.connectionDotEl = document.getElementById('connection-dot');
+    this.connectionStatusEl = document.getElementById('connection-status');
+    this.simulationStatusEl = document.getElementById('simulation-status');
+    this.connected = false;
     this.charRosterEl = document.getElementById('char-roster');
     this.charDetailEl = document.getElementById('char-detail');
     this.charCountEl = document.getElementById('char-count');
@@ -44,6 +47,7 @@ class UI {
   // ---- Time display ----
 
   updateTime(timeString, phase) {
+    if (!this.connected) return;
     // Parse the timeString (e.g. "Day 3 14:30")
     const match = timeString.match(/Day\s+(\d+)\s+(\d{2}:\d{2})/);
     if (match) {
@@ -73,13 +77,28 @@ class UI {
   }
 
   setStatus(text) {
-    if (text === 'Connected' || text === 'Running') {
+    this.connected = text === 'Connected';
+    if (this.connected) {
       this.connectionDotEl.className = 'connection-dot connected';
       this.connectionDotEl.title = 'Connected';
+      this.connectionStatusEl.textContent = 'Connected';
     } else {
       this.connectionDotEl.className = 'connection-dot disconnected';
       this.connectionDotEl.title = text;
+      this.connectionStatusEl.textContent = text === 'Connecting' ? 'Connecting' : 'Disconnected';
+      this.dayDisplayEl.textContent = 'Day —';
+      this.timeDisplayEl.textContent = '--:--';
+      this.phaseDisplayEl.textContent = '';
+      this.phaseDotEl.style.background = 'transparent';
+      this.simulationStatusEl.textContent = '—';
+      this.charCountEl.textContent = '—';
     }
+  }
+
+  updateSimulationStatus(timing, population) {
+    if (!this.connected) return;
+    this.simulationStatusEl.textContent = timing.paused ? `Paused · ${timing.speed}×` : `Running ${timing.speed}×`;
+    this.charCountEl.textContent = String(population);
   }
 
   // ---- Character selection ----

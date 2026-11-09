@@ -153,6 +153,15 @@ body {
   flex-shrink: 0;
 }
 
+.simulation-status, .population-status, .connection-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.connection-status { color: var(--text-muted); }
+
 .connection-dot {
   width: 8px;
   height: 8px;
@@ -1073,6 +1082,10 @@ body {
     display: none;
   }
 
+  .town-name, .phase-dot { display: none; }
+  .topbar-center { gap: 5px; }
+  .connection-dot { margin-left: 2px; }
+
   .floating-panel {
     position: fixed;
     left: 0;
@@ -1149,6 +1162,14 @@ body {
     bottom: 48px;
     width: 100%;
   }
+}
+
+@media (max-width: 600px) {
+  #app { grid-template-rows: 76px 1fr; }
+  #topbar { height: 76px; flex-wrap: wrap; justify-content: center; padding: 2px 6px; }
+  .topbar-left { display: none; }
+  .topbar-center, .topbar-right { width: 100%; justify-content: center; }
+  .simulation-status, .population-status, .connection-status { font-size: 11px; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {

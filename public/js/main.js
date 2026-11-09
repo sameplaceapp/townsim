@@ -92,7 +92,6 @@
   // Speed buttons
   document.getElementById('btn-pause').addEventListener('click', () => {
     fetch('/api/pause', { method: 'POST' });
-    setActiveButton('btn-pause');
   });
   document.getElementById('btn-1x').addEventListener('click', () => {
     fetch('/api/speed', {
@@ -100,7 +99,6 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ speed: 1 })
     });
-    setActiveButton('btn-1x');
   });
   document.getElementById('btn-2x').addEventListener('click', () => {
     fetch('/api/speed', {
@@ -108,7 +106,6 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ speed: 2 })
     });
-    setActiveButton('btn-2x');
   });
   document.getElementById('btn-5x').addEventListener('click', () => {
     fetch('/api/speed', {
@@ -116,12 +113,11 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ speed: 5 })
     });
-    setActiveButton('btn-5x');
   });
 
   function setActiveButton(id) {
     document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    if (id) document.getElementById(id)?.classList.add('active');
   }
 
   // Resize handler (high-DPI aware)
@@ -137,23 +133,32 @@
     const ws = new WebSocket(`${protocol}//${location.host}`);
 
     ws.onopen = () => {
-      ui.setStatus('Connected');
+      ui.setStatus('Connecting');
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === 'tick') {
+      if (data.type === 'tick' || data.type === 'snapshot') {
+        ui.setStatus('Connected');
         currentTick = data.tick;
         phase = data.phase;
-        parseClock(data.timeString);
+        const timeString = data.timeString || `Day ${data.time.day} ${String(data.time.hour).padStart(2, '0')}:${String(data.time.minute).padStart(2, '0')}`;
+        parseClock(timeString);
         clockTiming = data.timing;
         clockReceived = performance.now();
+        setActiveButton(data.timing.paused ? 'btn-pause' : `btn-${data.timing.speed}x`);
+        if (data.type === 'snapshot') {
+          camera.setWorldSize(data.gridWidth, data.gridHeight);
+          renderer.setWorldData(data.grid, data.buildings);
+          ui.setBuildings(data.buildings);
+        }
 
         // Update character positions
         if (data.characters) {
           const selectedId = ui.selectedCharId;
-          for (const update of data.characters) {
-            const existing = characters.find(c => c.id === update.id);
+          const previousCharacters = new Map(characters.map(c => [c.id, c]));
+          characters = data.characters.map(update => {
+            const existing = previousCharacters.get(update.id);
             if (existing) {
               // Track activity changes for particle spawning
               const prevActivity = previousActivities[update.id];
@@ -163,18 +168,21 @@
               previousActivities[update.id] = update.activity;
 
               Object.assign(existing, update);
-              if (existing.id === selectedId) existing._selected = true;
+              existing._selected = existing.id === selectedId;
+              return existing;
             } else {
-              characters.push(update);
               previousActivities[update.id] = update.activity;
+              update._selected = update.id === selectedId;
+              return update;
             }
-          }
+          });
           interpolator.onTick(characters, data.timing);
         }
 
         // Update UI
-        ui.updateTime(data.timeString, data.phase);
-        if (data.log) ui.updateLog(data.log);
+        ui.updateTime(timeString, data.phase);
+        ui.updateSimulationStatus(data.timing, characters.length);
+        if (data.log || data.activityLog) ui.updateLog(data.log || data.activityLog);
         ui.updateCharacterList(characters);
         ui.updateCharacterPanel(characters, currentTick);
       }
@@ -183,11 +191,13 @@
     ws.onclose = () => {
       clockTiming = { ...clockTiming, paused: true };
       interpolator.onTick(characters, clockTiming);
+      setActiveButton(null);
       ui.setStatus('Disconnected - reconnecting...');
       setTimeout(connectWebSocket, 3000);
     };
 
     ws.onerror = () => {
+      setActiveButton(null);
       ui.setStatus('Connection error');
     };
   }
@@ -236,7 +246,7 @@
       connectWebSocket();
       requestAnimationFrame(gameLoop);
 
-      ui.setStatus('Running');
+      ui.setStatus('Connecting');
     } catch (err) {
       ui.setStatus('Failed to load: ' + err.message);
       console.error(err);
