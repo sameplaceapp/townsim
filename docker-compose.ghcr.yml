@@ -1,0 +1,23 @@
+services:
+  townsim:
+    image: ${WILLOWBROOK_IMAGE:?Set WILLOWBROOK_IMAGE to your GHCR image reference}
+    platform: linux/arm64
+    ports:
+      - "${WILLOWBROOK_BIND_ADDRESS:-127.0.0.1}:${WILLOWBROOK_HOST_PORT:-3000}:3000"
+    environment:
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_DAILY_LIMIT: ${LLM_DAILY_LIMIT:-0}
+    volumes:
+      - townsim-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/stats"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  townsim-data:
+    name: ${WILLOWBROOK_VOLUME_NAME:-willowbrook-data}
