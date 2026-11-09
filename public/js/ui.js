@@ -16,10 +16,17 @@ class UI {
     this.charRosterEl = document.getElementById('char-roster');
     this.charDetailEl = document.getElementById('char-detail');
     this.charCountEl = document.getElementById('char-count');
+    this.directoryControlsEl = document.getElementById('directory-controls');
+    this.directorySearchEl = document.getElementById('directory-search');
+    this.directoryOccupationEl = document.getElementById('directory-occupation');
+    this.directoryCountEl = document.getElementById('directory-count');
+    this.directoryCharacters = [];
+    this.nameCollator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
     this.eventListEl = document.getElementById('event-list');
 
     this.buildings = {};
     this.onSelectCallback = null;
+    this.onDirectorySelect = null;
     this.onFollowCallback = null;
     this.notifications = new NotificationManager();
     this._lastLogEntries = null;
@@ -27,6 +34,15 @@ class UI {
     this.setupPanelCollapse();
     this.setupEventFilters();
     this.setupKeyboardShortcuts();
+    const refreshDirectory = () => { this._lastRosterKey = null; this.updateCharacterList(this.directoryCharacters); };
+    this.directorySearchEl.addEventListener('input', refreshDirectory);
+    this.directoryOccupationEl.addEventListener('change', refreshDirectory);
+    document.getElementById('directory-clear').addEventListener('click', () => {
+      this.directorySearchEl.value = '';
+      this.directoryOccupationEl.value = '';
+      refreshDirectory();
+      this.directorySearchEl.focus();
+    });
   }
 
   setBuildings(buildings) {
@@ -165,7 +181,7 @@ class UI {
     };
     if (socialLabels[activity]) {
       if (data.target) {
-        const t = characters ? characters.find(c => c.id === data.target) : null;
+        const t = characters instanceof Map ? characters.get(data.target) : characters ? characters.find(c => c.id === data.target) : null;
         return socialLabels[activity] + ' ' + (t ? t.name : data.target);
       }
       return socialLabels[activity].replace(' with', '').replace(' to', '');
@@ -177,49 +193,69 @@ class UI {
   // ---- Character Roster (list mode) ----
 
   updateCharacterList(characters) {
-    if (!this.charRosterEl || !characters || characters.length === 0) return;
+    if (!this.charRosterEl || !characters) return;
+    this.directoryCharacters = characters;
 
-    this.charCountEl.textContent = characters.length;
-
-    // If detail is visible, show avatar strip instead
-    if (this.selectedCharId && this.charDetailEl.style.display !== 'none') {
-      this.renderAvatarStrip(characters);
-      return;
+    if (this.selectedCharId && !characters.some(c => c.id === this.selectedCharId)) {
+      if (this.followingCharId === this.selectedCharId) {
+        this.followingCharId = null;
+        if (this.onFollowCallback) this.onFollowCallback(null);
+      }
+      this.selectedCharId = null;
+      this.charDetailEl.style.display = 'none';
     }
 
-    // BUG-11: Only rebuild DOM when roster data actually changed
-    const rosterKey = characters.map(c =>
-      `${c.id}:${c.activity}:${c.inside ? 1 : 0}:${c.id === this.selectedCharId ? 1 : 0}`
-    ).join('|');
+    const inDetail = !!this.selectedCharId && this.charDetailEl.style.display !== 'none';
+    this.directoryControlsEl.hidden = inDetail;
+    if (inDetail) {
+      const stripKey = JSON.stringify(characters.map(c => [c.id, c.name, c.color, c.id === this.selectedCharId]));
+      if (this._lastStripKey !== stripKey) {
+        this.renderAvatarStrip(characters);
+        this._lastStripKey = stripKey;
+      }
+      this._lastRosterKey = null;
+      return;
+    }
+    this._lastStripKey = null;
+
+    const search = this.directorySearchEl.value.trim().toLocaleLowerCase();
+    const selectedJob = this.directoryOccupationEl.value;
+    const jobs = [...new Set(characters.map(c => c.job).filter(job => typeof job === 'string' && job.trim()))];
+    if (selectedJob && !jobs.includes(selectedJob)) jobs.push(selectedJob);
+    jobs.sort(this.nameCollator.compare);
+    const jobsKey = JSON.stringify(jobs);
+    if (this._lastJobsKey !== jobsKey) {
+      this.directoryOccupationEl.innerHTML = '<option value="">All occupations</option>' +
+        jobs.map(job => `<option value="${this.escapeHtml(job)}">${this.escapeHtml(job)}</option>`).join('');
+      this.directoryOccupationEl.value = selectedJob;
+      this._lastJobsKey = jobsKey;
+    }
+
+    const filtered = characters.filter(c => (c.name || '').toLocaleLowerCase().includes(search) &&
+      (!selectedJob || c.job === selectedJob)).sort((a, b) =>
+        this.nameCollator.compare(a.name || '', b.name || '') || this.nameCollator.compare(a.id, b.id));
+    this.directoryCountEl.textContent = `${filtered.length} of ${characters.length} residents`;
+    const byId = new Map(characters.map(c => [c.id, c]));
+    const rosterKey = JSON.stringify(filtered.map(c => [c.id, c.name, c.job, c.color, c.activity,
+      c.inside, c.activityData?.target, c.activityData?.destination, byId.get(c.activityData?.target)?.name]));
     if (this._lastRosterKey === rosterKey) return;
     this._lastRosterKey = rosterKey;
-
-    const items = characters.map(char => {
+    this.charRosterEl.innerHTML = filtered.length ? filtered.map(char => {
       const emoji = this.getActivityEmoji(char.activity);
-      const actText = this.getActivityText(char, characters);
-      const sel = char.id === this.selectedCharId ? ' selected' : '';
+      const actText = this.getActivityText(char, byId);
       const insideTag = char.inside ? '<span class="char-inside-badge">IN</span>' : '';
-      const isDramatic = ['flirt', 'argue', 'confess', 'confront', 'cry', 'stormOff'].includes(char.activity);
-      const dramaIndicator = isDramatic ? '<span class="char-drama-indicator">!</span>' : '';
-
-      const safeName = this.escapeHtml(char.name);
-      const safeActText = this.escapeHtml(actText);
-      return `<div class="char-roster-item${sel}" data-char-id="${this.escapeHtml(char.id)}">
-        <span class="char-avatar-circle" style="background:${char.color || '#aaa'}">${safeName[0]}</span>
-        <span class="char-roster-name">${safeName}</span>
-        ${insideTag}
-        ${dramaIndicator}
-        <span class="char-roster-activity">${emoji} ${safeActText}</span>
-      </div>`;
-    }).join('');
-
-    this.charRosterEl.innerHTML = items;
+      const safeName = this.escapeHtml(char.name || 'Unnamed');
+      const job = this.escapeHtml(char.job || 'Unassigned');
+      return `<button type="button" class="char-roster-item" data-char-id="${this.escapeHtml(char.id)}">
+        <span class="char-avatar-circle" style="background:${this.escapeHtml(char.color || '#aaa')}">${safeName[0]}</span>
+        <span class="char-roster-identity"><span class="char-roster-name">${safeName}</span><span class="char-roster-job">${job}</span></span>
+        ${insideTag}<span class="char-roster-activity">${emoji} ${this.escapeHtml(actText)}</span>
+      </button>`;
+    }).join('') : '<div class="directory-empty">No residents match these filters.</div>';
 
     this.charRosterEl.querySelectorAll('.char-roster-item').forEach(el => {
       el.addEventListener('click', () => {
-        const id = el.dataset.charId;
-        this.selectCharacter(id);
-        if (this.onSelectCallback) this.onSelectCallback(id);
+        if (this.onDirectorySelect) this.onDirectorySelect(el.dataset.charId);
       });
     });
   }
@@ -236,8 +272,7 @@ class UI {
     this.charRosterEl.querySelectorAll('.char-avatar-circle').forEach(el => {
       el.addEventListener('click', () => {
         const id = el.dataset.charId;
-        this.selectCharacter(id);
-        if (this.onSelectCallback) this.onSelectCallback(id);
+        if (this.onDirectorySelect) this.onDirectorySelect(id);
       });
     });
   }
@@ -483,7 +518,7 @@ class UI {
   setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
       // Don't capture if typing in an input
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName) || e.target.isContentEditable) return;
 
       switch (e.key) {
         case ' ':
