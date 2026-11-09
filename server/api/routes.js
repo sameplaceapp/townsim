@@ -18,8 +18,9 @@ router.post('/backup', (req, res) => {
     const origin = new URL(req.get('origin'));
     const loopback = localPeer && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
     const configuredBind = process.env.WILLOWBROOK_BACKUP_BIND_ADDRESS;
-    const dockerOrigin = dockerPeer && origin.hostname === configuredBind &&
-      (configuredBind === '127.0.0.1' || isPrivateIPv4(configuredBind));
+    const dockerOrigin = dockerPeer && (configuredBind === '127.0.0.1'
+      ? ['localhost', '127.0.0.1'].includes(origin.hostname)
+      : isPrivateIPv4(configuredBind) && origin.hostname === configuredBind);
     localOrigin = origin.protocol === 'http:' && origin.host === host && (loopback || dockerOrigin);
   } catch (_) { /* Missing or invalid Origin is not a local browser request. */ }
   const forwarded = Object.keys(req.headers).some(h => h === 'forwarded' || h.startsWith('x-forwarded-'));
