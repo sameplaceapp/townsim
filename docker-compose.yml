@@ -3,12 +3,14 @@ services:
   townsim:
     build: .
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${WILLOWBROOK_BIND_ADDRESS:-127.0.0.1}:3000:3000"
     environment:
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_DAILY_LIMIT: ${LLM_DAILY_LIMIT:-0}
+      WILLOWBROOK_BACKUP_DOCKER_GATEWAY: '1'
+      WILLOWBROOK_BACKUP_BIND_ADDRESS: ${WILLOWBROOK_BIND_ADDRESS:-127.0.0.1}
     volumes:
       - townsim-data:/app/data
     restart: unless-stopped

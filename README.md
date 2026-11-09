@@ -242,10 +242,18 @@ World state and the AI request counter are stored in `data/` (or the Docker volu
 
 ### Export a world backup
 
-In a browser on the same machine as the Node.js server, open Willowbrook through `http://localhost:3000` or `http://127.0.0.1:3000` and select **Backup**. The browser downloads a file such as `willowbrook-backup-2026-01-01T12-34-56-789Z.json` (UTC). The simulation continues running and its existing save files are not changed. The backup captures the most recently completed server update, which can lag the animated browser clock by up to one movement update under normal conditions.
+Open Willowbrook and select **Backup**. The browser downloads a file such as `willowbrook-backup-2026-01-01T12-34-56-789Z.json` (UTC). The simulation continues running and its existing save files are not changed. The backup captures the most recently completed server update, which can lag the animated browser clock by up to one movement update under normal conditions.
 
 The JSON is a normal version-1 `data/state.json` world snapshot with an additional `_backup` object containing the backup format and version, creation time, simulation time, application version, and the AI request budget's persisted day and usage. It does not contain application configuration or credentials. Keep the download in a safe location. It can be inspected with `node -e "const b=require('./YOUR-BACKUP.json'); console.log(b._backup, b.characters.length)"` after substituting the actual filename.
 
-The download is restricted to direct loopback connections with a same-origin local browser. It intentionally rejects LAN, Tailscale, Codespaces forwarding, and reverse-proxy access. A standard Docker published port uses a network bridge and therefore cannot use this browser download; run the Node.js app directly on the same machine to export. Do not expose or proxy the backup route publicly.
+For a browser on the same machine, the default Compose binding is `127.0.0.1:3000`. For a browser on another device on a trusted private LAN, bind the container to the Pi's specific private IPv4 address when starting or recreating it; for example:
+
+```bash
+WILLOWBROOK_BIND_ADDRESS=192.168.10.26 docker compose up -d --build
+```
+
+Use the Pi's actual private address and open that address on port 3000. To keep the binding when recreating the container, supply the same variable again or add it to the existing `.env` file. Docker publishes the app only on the selected interface. The backup allows the same private address and direct Docker bridge traffic; wildcard and public bind addresses are not accepted for backup. Forwarded or reverse-proxy requests, including Codespaces forwarding, remain blocked.
+
+Willowbrook has no login: **anyone who can access the app on that private LAN address can also download its backup**. Use a trusted LAN, do not publish the port on a public interface, and do not add public router forwarding or a public reverse proxy. Do not set `WILLOWBROOK_BACKUP_DOCKER_GATEWAY` outside the provided private Docker deployment.
 
 There is no restore interface yet. The world fields are directly compatible with the existing state loader; the `_backup.aiRequestBudget` value represents the separate `data/ai-budget.json` file and must also be retained when restoring an AI-enabled world to preserve its request limit. Restoration should be performed only on a separate copy after backing up existing data; never overwrite an existing world as a test.

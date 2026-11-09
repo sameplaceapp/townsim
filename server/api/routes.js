@@ -1,23 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const { exportWorld, backupFilename } = require('../backup/export');
+const { trustedDockerGateway, isPrivateIPv4 } = require('../backup/dockerGateway');
+const dockerGateway = trustedDockerGateway();
 
-// Backups contain private world history. Only a direct local browser may
-// request one; forwarded/proxied and cross-origin requests are not accepted.
+// Backups contain private world history. Docker LAN access is accepted only
+// for the explicitly configured private bind address, with no proxy headers.
 router.post('/backup', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const peer = req.socket.remoteAddress;
-  const localPeer = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(peer);
+  const normalizedPeer = peer?.replace(/^::ffff:/, '');
+  const localPeer = ['127.0.0.1', '::1'].includes(normalizedPeer);
+  const dockerPeer = !!dockerGateway && (normalizedPeer === dockerGateway || isPrivateIPv4(normalizedPeer));
   const host = req.get('host');
   let localOrigin = false;
   try {
     const origin = new URL(req.get('origin'));
-    localOrigin = origin.protocol === 'http:' && origin.host === host &&
-      ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
+    const loopback = localPeer && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
+    const configuredBind = process.env.WILLOWBROOK_BACKUP_BIND_ADDRESS;
+    const dockerOrigin = dockerPeer && origin.hostname === configuredBind &&
+      (configuredBind === '127.0.0.1' || isPrivateIPv4(configuredBind));
+    localOrigin = origin.protocol === 'http:' && origin.host === host && (loopback || dockerOrigin);
   } catch (_) { /* Missing or invalid Origin is not a local browser request. */ }
   const forwarded = Object.keys(req.headers).some(h => h === 'forwarded' || h.startsWith('x-forwarded-'));
-  if (!localPeer || !localOrigin || forwarded || req.get('x-willowbrook-backup') !== '1') {
-    return res.status(403).json({ error: 'Backup downloads require a direct local browser connection.' });
+  if (!localOrigin || forwarded || req.get('x-willowbrook-backup') !== '1') {
+    return res.status(403).json({ error: 'Backup downloads require a direct connection to the configured private address.' });
   }
   try {
     const created = new Date();
