@@ -1,5 +1,35 @@
 const express = require('express');
 const router = express.Router();
+const { exportWorld, backupFilename } = require('../backup/export');
+
+// Backups contain private world history. Only a direct local browser may
+// request one; forwarded/proxied and cross-origin requests are not accepted.
+router.post('/backup', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const peer = req.socket.remoteAddress;
+  const localPeer = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(peer);
+  const host = req.get('host');
+  let localOrigin = false;
+  try {
+    const origin = new URL(req.get('origin'));
+    localOrigin = origin.protocol === 'http:' && origin.host === host &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
+  } catch (_) { /* Missing or invalid Origin is not a local browser request. */ }
+  const forwarded = Object.keys(req.headers).some(h => h === 'forwarded' || h.startsWith('x-forwarded-'));
+  if (!localPeer || !localOrigin || forwarded || req.get('x-willowbrook-backup') !== '1') {
+    return res.status(403).json({ error: 'Backup downloads require a direct local browser connection.' });
+  }
+  try {
+    const created = new Date();
+    const backup = exportWorld(req.app.get('engine'), created);
+    res.set('Content-Disposition', `attachment; filename="${backupFilename(created)}"`);
+    res.set('X-Content-Type-Options', 'nosniff');
+    return res.type('application/json').send(backup);
+  } catch (err) {
+    console.error('Backup export failed:', err.message);
+    return res.status(503).json({ error: 'Unable to create a complete world backup.' });
+  }
+});
 
 router.get('/state', (req, res) => {
   const engine = req.app.get('engine');

@@ -186,6 +186,19 @@ body {
   gap: 8px;
 }
 
+.backup-button {
+  padding: 5px 8px;
+  border: var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.backup-button:disabled { opacity: 0.6; cursor: wait; }
+
 /* Speed button group */
 .speed-group {
   display: inline-flex;

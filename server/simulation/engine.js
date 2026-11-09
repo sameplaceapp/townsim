@@ -407,8 +407,7 @@ class SimulationEngine {
     };
   }
 
-  save() {
-    // Save drama state alongside world state
+  createSnapshot() {
     const worldData = this.world.toJSON();
     worldData.version = 1;
     worldData.activityLog = this.world.activityLog;
@@ -416,7 +415,11 @@ class SimulationEngine {
     worldData.timingProgress = { minute: this.minuteProgress, logic: this.logicProgress, movement: this.movementProgress };
     worldData.characters = this.world.characters.map(c => ({ ...c, path: [...c.path] }));
     worldData.drama = this.dramaEngine.toJSON();
-    this.stateManager.saveRaw(worldData);
+    return worldData;
+  }
+
+  save() {
+    this.stateManager.saveRaw(this.createSnapshot());
   }
 
   restoreState(saved) {

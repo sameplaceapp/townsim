@@ -239,3 +239,13 @@ MIT
 ### World saves and AI budget
 
 World state and the AI request counter are stored in `data/` (or the Docker volume). Snapshots are written atomically with a previous backup; if both are unreadable, startup stops rather than replacing the world. Back up this data before upgrading. AI calls run in the background, use a UTC daily attempt limit, and are disabled by default. Set `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` if required, and `LLM_DAILY_LIMIT` in `.env` to enable them. The simulation uses rule-based decisions immediately; recent AI results are reused only if the situation matches. After a provider failure, requests pause for one minute. Usage and fallback status are visible in `/api/stats`.
+
+### Export a world backup
+
+In a browser on the same machine as the Node.js server, open Willowbrook through `http://localhost:3000` or `http://127.0.0.1:3000` and select **Backup**. The browser downloads a file such as `willowbrook-backup-2026-01-01T12-34-56-789Z.json` (UTC). The simulation continues running and its existing save files are not changed. The backup captures the most recently completed server update, which can lag the animated browser clock by up to one movement update under normal conditions.
+
+The JSON is a normal version-1 `data/state.json` world snapshot with an additional `_backup` object containing the backup format and version, creation time, simulation time, application version, and the AI request budget's persisted day and usage. It does not contain application configuration or credentials. Keep the download in a safe location. It can be inspected with `node -e "const b=require('./YOUR-BACKUP.json'); console.log(b._backup, b.characters.length)"` after substituting the actual filename.
+
+The download is restricted to direct loopback connections with a same-origin local browser. It intentionally rejects LAN, Tailscale, Codespaces forwarding, and reverse-proxy access. A standard Docker published port uses a network bridge and therefore cannot use this browser download; run the Node.js app directly on the same machine to export. Do not expose or proxy the backup route publicly.
+
+There is no restore interface yet. The world fields are directly compatible with the existing state loader; the `_backup.aiRequestBudget` value represents the separate `data/ai-budget.json` file and must also be retained when restoring an AI-enabled world to preserve its request limit. Restoration should be performed only on a separate copy after backing up existing data; never overwrite an existing world as a test.

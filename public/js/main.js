@@ -103,6 +103,32 @@
   };
 
   // Speed buttons
+  document.getElementById('export-backup').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/backup', { method: 'POST', headers: { 'X-Willowbrook-Backup': '1' } });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.error || 'Unable to create the backup.');
+      }
+      const blob = await response.blob();
+      const filename = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '')?.[1] || 'willowbrook-backup.json';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      alert(`Backup failed: ${err.message}`);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   document.getElementById('btn-pause').addEventListener('click', () => {
     fetch('/api/pause', { method: 'POST' });
   });
