@@ -17,17 +17,20 @@
         <span class="town-icon">&#x1F333;</span>
         <span class="town-name">Willowbrook</span>
       </div>
-      <div class="topbar-center">
-        <span class="day-display" id="day-display">Day 1</span>
-        <span class="time-display" id="time-display">06:00</span>
-        <span class="phase-display" id="phase-display">Morning</span>
+      <div class="topbar-center" role="status" aria-label="Simulation status">
+        <span class="day-display" id="day-display">Day —</span>
+        <span class="time-display" id="time-display">--:--</span>
+        <span class="phase-display" id="phase-display"></span>
         <span class="phase-dot" id="phase-dot"></span>
-        <span class="connection-dot connected" id="connection-dot" title="Connected"></span>
+        <span class="simulation-status" id="simulation-status">—</span>
+        <span class="population-status"><span id="char-count">—</span> residents</span>
+        <span class="connection-dot disconnected" id="connection-dot" aria-hidden="true"></span>
+        <span class="connection-status" id="connection-status">Connecting</span>
       </div>
       <div class="topbar-right">
         <div class="speed-group" id="controls">
           <button class="speed-btn pause" id="btn-pause" title="Pause">| |</button>
-          <button class="speed-btn active" id="btn-1x" title="Normal speed">&gt;</button>
+          <button class="speed-btn" id="btn-1x" title="Normal speed">&gt;</button>
           <button class="speed-btn" id="btn-2x" title="Fast">&gt;&gt;</button>
           <button class="speed-btn" id="btn-5x" title="Fastest">&gt;&gt;&gt;</button>
         </div>
@@ -49,7 +52,6 @@
       <div class="floating-panel" id="character-tray">
         <div class="panel-handle" id="char-tray-handle">
           <span class="panel-title">Townsfolk</span>
-          <span class="panel-badge" id="char-count">12</span>
           <span class="collapse-icon">&#x25BC;</span>
         </div>
         <div class="panel-body">

@@ -23,6 +23,12 @@ const wss = setupWebSocket(server);
 // Simulation engine
 const engine = new SimulationEngine(config, wss);
 
+// Send an authoritative snapshot on every connection, including reconnects
+// while the simulation is paused (when there may be no subsequent ticks).
+wss.on('connection', (ws) => {
+  ws.send(JSON.stringify({ type: 'snapshot', ...engine.getState() }));
+});
+
 // Make engine accessible to API routes
 app.set('engine', engine);
 
