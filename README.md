@@ -45,8 +45,8 @@ You watch it unfold like a soap opera you can't stop watching.
 
 ### Prerequisites
 
-- Node.js 20+
-- An OpenAI-compatible LLM endpoint (OpenRouter, Ollama, OpenAI, etc.)
+- Docker with Compose for the Docker workflow, or Node.js 20+ for local development.
+- An OpenAI-compatible LLM endpoint is optional; rule-based behavior works without one.
 
 ### Run Locally
 
@@ -59,14 +59,12 @@ cp .env.example .env
 npm start
 ```
 
-Open http://localhost:3000 on the Docker host. Compose binds only to loopback by default. The simulation continues without a browser while the container is running.
+Open http://localhost:3000. The simulation continues without a browser while the server is running.
 
 ### Run with Docker
 
 ```bash
-cp .env.example .env
-# Edit .env with your LLM credentials
-docker compose up --build
+./scripts/start-docker.sh
 ```
 
 ### Environment Variables
@@ -246,13 +244,9 @@ Open Willowbrook and select **Backup**. The browser downloads a file such as `wi
 
 The JSON is a normal version-1 `data/state.json` world snapshot with an additional `_backup` object containing the backup format and version, creation time, simulation time, application version, and the AI request budget's persisted day and usage. It does not contain application configuration or credentials. Keep the download in a safe location. It can be inspected with `node -e "const b=require('./YOUR-BACKUP.json'); console.log(b._backup, b.characters.length)"` after substituting the actual filename.
 
-For a browser on the same machine, the default Compose binding is `127.0.0.1:3000`. For a browser on another device on a trusted private LAN, bind the container to the Pi's specific private IPv4 address when starting or recreating it; for example:
+For a browser on another device on a trusted private LAN, start the app with `./scripts/start-docker.sh`.
 
-```bash
-WILLOWBROOK_BIND_ADDRESS=192.168.10.26 docker compose up -d --build
-```
-
-Use the Pi's actual private address and open that address on port 3000. To keep the binding when recreating the container, supply the same variable again or add it to the existing `.env` file. Docker publishes the app only on the selected interface. The backup allows the same private address and direct Docker bridge traffic; wildcard and public bind addresses are not accepted for backup. Forwarded or reverse-proxy requests, including Codespaces forwarding, remain blocked.
+The launcher detects a private IPv4 address and prints the URL to open on another device. It is intended for Linux, including ARM64 Raspberry Pi, and includes a macOS detection fallback. It starts Docker Compose without changing host settings. If the host has multiple private networks, choose an address for a particular start with `WILLOWBROOK_BIND_ADDRESS=<private-ip> ./scripts/start-docker.sh`. If the device's address changes, rerun the launcher to update the Docker binding. A plain `docker compose up` retains the safer loopback-only default. Docker publishes the app only on the selected interface. The backup allows the same private address and direct Docker bridge traffic; wildcard and public bind addresses are not accepted for backup. Forwarded or reverse-proxy requests, including Codespaces forwarding, remain blocked.
 
 Willowbrook has no login: **anyone who can access the app on that private LAN address can also download its backup**. Use a trusted LAN, do not publish the port on a public interface, and do not add public router forwarding or a public reverse proxy. Do not set `WILLOWBROOK_BACKUP_DOCKER_GATEWAY` outside the provided private Docker deployment.
 

@@ -91,7 +91,7 @@ test('Docker bridge trust selects the default gateway and private IPv4 addresses
   const routes = 'Iface Destination Gateway Flags RefCnt Use Metric Mask\neth0 00000000 010011AC 0003 0 0 0 00000000\neth0 000011AC 00000000 0001 0 0 0 0000FFFF\n';
   assert.equal(dockerGateway(routes), '172.17.0.1');
   assert.equal(dockerGateway('Iface Destination Gateway Flags\neth0 000011AC 00000000 0001\n'), null);
-  assert.equal(isPrivateIPv4('192.168.10.26'), true);
+  assert.equal(isPrivateIPv4('192.168.1.2'), true);
   assert.equal(isPrivateIPv4('10.2.3.4'), true);
   assert.equal(isPrivateIPv4('172.31.0.1'), true);
   assert.equal(isPrivateIPv4('172.32.0.1'), false);
