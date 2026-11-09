@@ -44,10 +44,23 @@
     }
     ui.selectCharacter(charId);
     ui.updateCharacterPanel(characters, currentTick);
+    ui.updateCharacterList(characters);
   }
 
   // Wire up list click callback
   ui.onSelectCallback = selectCharById;
+
+  ui.onDirectorySelect = function (charId) {
+    const char = characters.find(c => c.id === charId);
+    if (!char) return;
+    if (followTargetId && followTargetId !== charId) {
+      followTargetId = null;
+      ui.followingCharId = null;
+    }
+    const pos = char.pos;
+    if (pos) camera.centerOn(pos.x + 0.5, pos.y + 0.5);
+    selectCharById(charId);
+  };
 
   // Wire up follow callback
   ui.onFollowCallback = function (charId) {

@@ -55,6 +55,16 @@
           <span class="collapse-icon">&#x25BC;</span>
         </div>
         <div class="panel-body">
+          <div class="directory-controls" id="directory-controls">
+            <label class="directory-search-label" for="directory-search">Search residents</label>
+            <input id="directory-search" type="search" placeholder="Search by name" autocomplete="off">
+            <div class="directory-filters">
+              <label for="directory-occupation">Occupation</label>
+              <select id="directory-occupation"><option value="">All occupations</option></select>
+              <button type="button" id="directory-clear">Clear</button>
+            </div>
+            <div id="directory-count" class="directory-count" aria-live="polite"></div>
+          </div>
           <!-- Roster mode -->
           <div id="char-roster" class="char-roster"></div>
           <!-- Detail mode (hidden by default) -->
