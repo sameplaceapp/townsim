@@ -50,7 +50,10 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-server.listen(PORT, () => {
-  console.log(`TownSim running at http://localhost:${PORT}`);
+// FIX: Added '0.0.0.0' host variable to allow external network routing
+const HOST = '0.0.0.0';
+
+server.listen(PORT, HOST, () => {
+  console.log(`TownSim running at http://${HOST}:${PORT}`);
   console.log(`Tick interval: ${config.simulation.tickInterval}ms`);
 });
