@@ -11,6 +11,7 @@ services:
       LLM_DAILY_LIMIT: ${LLM_DAILY_LIMIT:-0}
     volumes:
       - townsim-data:/app/data
+    network_mode: "host"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/stats"]
