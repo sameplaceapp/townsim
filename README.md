@@ -242,19 +242,65 @@ These commands simulate 14 days for each of 10 fixed seeds without reading or wr
 | POST | `/api/speed` | Set simulation speed `{ speed: 1-5 }` |
 | POST | `/api/pause` | Toggle pause |
 
-## Deployment
+## Raspberry Pi deployment with GHCR
 
-### Hostinger VPS
+The Pi only needs Docker, Docker Compose, the deployment Compose file, and optional settings; it does not need the repository or Node.js. The workflow in `.github/workflows/publish-image.yml` tests the code and publishes a `linux/arm64` image to `ghcr.io/<owner>/<repository>` on pushes to `main`. It also supports manual runs on `main`. Each successful run publishes `latest` and `sha-<full-commit-sha>` tags. It does not contact or update the Pi. Changes on `dev` do not publish an image until they are deliberately promoted to `main`.
 
-1. SSH into your VPS
-2. Install Docker and Docker Compose
-3. Clone the repo and set up `.env`
-4. Run `docker compose up -d`
-5. Configure your reverse proxy (nginx) to forward to port 3000
+### First deployment
 
-### Docker Volume
+1. On GitHub, make sure the workflow has run successfully on `main` and note the package's visibility. The first image is not available until that happens. The package owner must allow the repository's Actions workflow to write packages.
+2. On the Pi, create a directory for deployment configuration. Copy only `docker-compose.ghcr.yml` into it from GitHub (download it through GitHub or transfer it from another machine). No repository checkout is needed:
 
-The simulation state persists in a Docker volume (`townsim-data`). Stopping and restarting the container resumes from where it left off.
+   ```bash
+   mkdir -p ~/willowbrook
+   cd ~/willowbrook
+   # Place docker-compose.ghcr.yml in this directory.
+   ```
+
+3. If the GHCR package is private, authenticate once on the Pi with `docker login ghcr.io -u YOUR_GITHUB_USERNAME` and enter a GitHub personal access token when prompted. A classic token needs `read:packages`, and its account must have access to the package; organization SSO authorization may also be required. Do not put the token in the Compose file, `.env`, or shell command history. Public packages do not require login.
+4. The container listens on port 3000, and the stable named volume is `willowbrook-data`. The default host binding is loopback only. Create or edit `.env` in this directory to select your image; the other settings are optional:
+
+   ```dotenv
+   WILLOWBROOK_IMAGE=ghcr.io/sameplaceapp/townsim:latest
+   WILLOWBROOK_BIND_ADDRESS=<private-ip-of-pi>
+   WILLOWBROOK_VOLUME_NAME=<existing-volume-name>
+   ```
+
+   Replace the example image with your own lowercase GHCR owner and repository if using another fork. Replace the other placeholders with real values, or omit those lines. To discover the Pi's addresses, run `hostname -I` and select its private LAN address. This is deployment configuration, not a hard-coded address in the app. Keep the app on a trusted LAN; do not bind it to a public interface or add public router forwarding. The app has no login. Optional LLM settings (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_DAILY_LIMIT`) can be set in `.env`; the default works without an LLM.
+5. **If you already have a world**, find the actual volume mounted at `/app/data` before starting the new Compose setup. For example, identify the existing container with `docker ps -a`, then run:
+
+   ```bash
+   docker inspect <existing-container> --format '{{range .Mounts}}{{println .Name .Destination}}{{end}}'
+   ```
+
+   Set `WILLOWBROOK_VOLUME_NAME` to the volume name shown beside `/app/data` in `.env`. A new directory or Compose project can otherwise select a different volume and appear to start a fresh world. Back up the existing volume first. Never remove or overwrite it to test a migration.
+6. Pull the finished image and start it:
+
+   ```bash
+   docker compose -f docker-compose.ghcr.yml pull
+   docker compose -f docker-compose.ghcr.yml up -d --no-build
+   ```
+
+   Open the Pi's configured address on port 3000, and check `docker compose -f docker-compose.ghcr.yml logs --tail=50` if needed. Compose restarts the container unless it was explicitly stopped. The named volume holds `/app/data/state.json`, its backup, and the AI request counter across container replacement.
+
+### Update and rollback
+
+The Pi updates only when you run these commands. Before an update, record the currently running image's digest and back up the volume. To find the digest of the running container's image:
+
+```bash
+docker image inspect "$(docker inspect "$(docker compose -f docker-compose.ghcr.yml ps -q townsim)" --format '{{.Image}}')" --format '{{json .RepoDigests}}'
+```
+
+Save the `ghcr.io/...@sha256:...` value for rollback. If the list is empty, record the image's digest from its GHCR package page instead. In the deployment directory, with `WILLOWBROOK_IMAGE` set to the desired image in `.env`:
+
+```bash
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d --no-build
+```
+
+For rollback, set `WILLOWBROOK_IMAGE` in `.env` to a previously published full commit tag, `ghcr.io/<owner>/<repository>:sha-<full-commit-sha>`, or a previously recorded `ghcr.io/<owner>/<repository>@sha256:<manifest-digest>`, then run the same two commands. Commit tags identify workflow runs but can be moved if an image is rebuilt; a recorded manifest digest identifies the exact image. GHCR must still retain that tag or digest. An older application may not understand data written by a newer version: preserve a separate backup before changing versions and do not overwrite the existing volume to test a rollback.
+
+To reclaim disk space, `docker image prune` removes dangling images after confirmation and does not remove volumes. It may remove a locally cached untagged image useful for rollback, so retain the desired rollback tag or digest in GHCR. To remove a specific old image, inspect `docker image ls` and use `docker image rm <image-reference>` only after confirming it is not needed. Avoid `docker compose down -v`, volume pruning, and `docker system prune --volumes`: those can delete world data.
 
 ## License
 
