@@ -88,6 +88,7 @@ class InputHandler {
   }
 
   onKeyDown(e) {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
     this.keys.add(e.key.toLowerCase());
   }
 

@@ -59,6 +59,66 @@ class DramaEngine {
     this.lastSeedCheck = 0;
     this.lastClimaxTick = 0;
     this.storylineCounter = 0;
+    const settings = world.config?.drama || {};
+    const bounded = (value, fallback, max) => Number.isFinite(value) ? Math.max(0, Math.min(max, value)) : fallback;
+    this.pacing = {
+      eventChance: bounded(settings.eventChance, 0.12, 1),
+      conflictFrequency: bounded(settings.conflictFrequency, 0.4, 1),
+      romanceFrequency: bounded(settings.romanceFrequency, 0.5, 1),
+      cooldownHours: bounded(settings.cooldownHours, 18, 720)
+    };
+    // Absolute simulated minutes, not wall-clock time or speed-dependent timers.
+    this.lastMajorByCharacter = Object.create(null);
+  }
+
+  simulationMinute() {
+    const { day, hour, minute } = this.world.time;
+    return (day - 1) * 1440 + hour * 60 + minute;
+  }
+
+  canInteract(a, b) {
+    if (!a || !b || a.id === b.id || b.activity === 'sleep') return false;
+    if (a.inside || b.inside) return a.inside && b.inside && a.location === b.location;
+    return Math.abs(a.pos.x - b.pos.x) <= 2 && Math.abs(a.pos.y - b.pos.y) <= 2;
+  }
+
+  isReady(ids, now, continuation = []) {
+    return ids.every(id => {
+      const last = this.lastMajorByCharacter[id];
+      return last === undefined || (continuation.includes(id) && last === now) || now - last >= this.pacing.cooldownHours * 60;
+    });
+  }
+
+  chance(category, character) {
+    const traits = character?.personality || [];
+    let factor = 1;
+    if (category === 'romance' && traits.includes('flirtatious')) factor *= 1.5;
+    if (category === 'conflict' && traits.includes('grumpy')) factor *= 1.5;
+    if (traits.includes('cautious')) factor *= 0.6;
+    const categoryFrequency = category === 'romance' ? this.pacing.romanceFrequency : this.pacing.conflictFrequency;
+    return Math.random() < Math.min(1, this.pacing.eventChance * categoryFrequency * factor);
+  }
+
+  allowAction(actor, target, action) {
+    const category = ['flirt', 'confess'].includes(action) ? 'romance' :
+      ['argue', 'confront', 'stormOff'].includes(action) ? 'conflict' : null;
+    if (!category) return true;
+    const now = this.simulationMinute();
+    const participants = target ? [actor.id, target.id] : [actor.id];
+    if (!this.isReady(participants, now)) return false;
+    const rel = target && actor.relationships[target.id];
+    if (action === 'stormOff') {
+      if (!['angry', 'bitter', 'sad'].includes(actor.mood)) return false;
+    } else {
+      if (!this.canInteract(actor, target) || !rel) return false;
+      if (category === 'conflict' && !(rel.affection < 4.5 || rel.trust < 3.5)) return false;
+      if (action === 'flirt' && !(rel.attraction >= 3 ||
+          ((actor.personality || []).includes('flirtatious') && rel.affection >= 5))) return false;
+      if (action === 'confess' && !(rel.attraction >= 5 && rel.affection >= 5 && (rel.interactionCount || 0) >= 3)) return false;
+    }
+    if (!this.chance(category, actor)) return false;
+    for (const id of participants) this.lastMajorByCharacter[id] = now;
+    return true;
   }
 
   // Called every tick from engine.js
@@ -101,6 +161,12 @@ class DramaEngine {
   updateStorylinePhase(story, tick) {
     const tension = story.tension;
     const age = tick - story.startTick;
+    // Older saves have no startMinute; reconstruct elapsed simulated time
+    // from the original tick cadence without changing their saved format.
+    const sim = this.world.config?.simulation;
+    const minutesPerTick = sim?.tickInterval && sim?.minuteInterval ? sim.tickInterval / sim.minuteInterval : 10;
+    const ageMinutes = Number.isFinite(story.startMinute)
+      ? this.simulationMinute() - story.startMinute : age * minutesPerTick;
 
     switch (story.phase) {
       case 'setup':
@@ -110,9 +176,17 @@ class DramaEngine {
         break;
       case 'tension_building':
         if (tension >= DRAMA_RULES.climaxThreshold &&
-            tick - this.lastClimaxTick >= DRAMA_RULES.minTimeBetweenClimax) {
+            tick - this.lastClimaxTick >= DRAMA_RULES.minTimeBetweenClimax &&
+            this.isReady(story.participants, this.simulationMinute()) &&
+            this.chance(story.type === 'love_triangle' || story.type === 'forbidden_friendship' ? 'romance' : 'conflict',
+              this.world.characters.find(c => c.id === story.participants[0]))) {
           story.phase = 'climax';
           this.lastClimaxTick = tick;
+          for (const id of story.participants) this.lastMajorByCharacter[id] = this.simulationMinute();
+        } else if (ageMinutes >= 1440 && tension < 0.1) {
+          // A story that fizzles out can resolve quietly instead of lasting forever.
+          story.phase = 'resolution';
+          story.lastEventTick = tick;
         }
         break;
       case 'climax':
@@ -283,11 +357,11 @@ class DramaEngine {
               s.participants.includes(charB.id)
             );
             if (!alreadyInTriangle) {
-              this.createStoryline('love_triangle', {
+              const created = this.createStoryline('love_triangle', {
                 participants: [charA.id, charB.id, other.id],
                 roles: { pursuer: charA.id, target: charB.id, rival: other.id }
-              }, tick);
-              break;
+              }, tick, [charA.id, charB.id]);
+              if (created) return;
             }
           }
         }
@@ -304,10 +378,11 @@ class DramaEngine {
           s.participants.includes(charB.id)
         );
         if (!alreadyRivals) {
-          this.createStoryline('rivalry', {
+          const created = this.createStoryline('rivalry', {
             participants: [charA.id, charB.id],
             roles: { rival_a: charA.id, rival_b: charB.id }
-          }, tick);
+          }, tick, [charA.id, charB.id]);
+          if (created) return;
         }
       }
     }
@@ -325,13 +400,20 @@ class DramaEngine {
           this.createStoryline('grudge_match', {
             participants: [charA.id, charB.id],
             roles: { aggrieved: charB.id, offender: charA.id }
-          }, tick);
+          }, tick, [charA.id, charB.id]);
         }
       }
     }
   }
 
-  createStoryline(type, config, tick) {
+  createStoryline(type, config, tick, continuation = []) {
+    if (this.activeStorylines.length >= DRAMA_RULES.maxActiveStorylines) return null;
+    const now = this.simulationMinute();
+    if (!this.isReady(config.participants, now, continuation)) return null;
+    const category = type === 'love_triangle' || type === 'forbidden_friendship' ? 'romance' : 'conflict';
+    const actor = this.world.characters.find(c => c.id === config.participants[0]);
+    if (!continuation.length && !this.chance(category, actor)) return null;
+    for (const id of config.participants) this.lastMajorByCharacter[id] = now;
     const storyline = {
       id: `story_${++this.storylineCounter}`,
       type,
@@ -340,6 +422,7 @@ class DramaEngine {
       phase: 'setup',
       tension: 0.2,
       startTick: tick,
+      startMinute: now,
       lastEventTick: tick,
       events: [{ tick, type: 'storyline_started', details: type }],
       resolved: false
@@ -358,7 +441,7 @@ class DramaEngine {
   seedDrama(tick) {
     const seed = this.findBestSeed(tick);
     if (seed) {
-      this.createStoryline(seed.type, seed, tick);
+      if (!this.createStoryline(seed.type, seed, tick)) return;
 
       // Inject initial emotions
       for (const [charId, emotions] of Object.entries(seed.initialEmotions || {})) {
@@ -380,8 +463,8 @@ class DramaEngine {
         const relAB = charA.relationships[charB.id];
         if (!relAB) continue;
 
-        // High interaction count but low attraction = potential crush seed
-        if (relAB.interactionCount > 5 && relAB.affection > 5 && relAB.attraction < 3) {
+        // Only seed a triangle when a real attraction and shared history exist.
+        if (relAB.interactionCount > 5 && relAB.affection > 5 && relAB.attraction >= 3) {
           // Check if charB has a close relationship with someone else
           for (const charC of chars) {
             if (charC.id === charA.id || charC.id === charB.id) continue;
@@ -426,7 +509,8 @@ class DramaEngine {
           const hasConflict = a.personality.some(t =>
             ['ambitious', 'proud', 'competitive'].includes(t)
           );
-          if (hasConflict) {
+          const rel = a.relationships[b.id];
+          if (hasConflict && rel && (rel.affection < 4.5 || rel.trust < 3.5)) {
             return {
               type: 'rivalry',
               participants: [a.id, b.id],
@@ -573,7 +657,8 @@ class DramaEngine {
       townMood: this.townMood,
       lastSeedCheck: this.lastSeedCheck,
       lastClimaxTick: this.lastClimaxTick,
-      storylineCounter: this.storylineCounter
+      storylineCounter: this.storylineCounter,
+      lastMajorByCharacter: this.lastMajorByCharacter
     };
   }
 
@@ -587,6 +672,7 @@ class DramaEngine {
     this.lastSeedCheck = data.lastSeedCheck || 0;
     this.lastClimaxTick = data.lastClimaxTick || 0;
     this.storylineCounter = data.storylineCounter || 0;
+    this.lastMajorByCharacter = Object.assign(Object.create(null), data.lastMajorByCharacter || {});
   }
 }
 

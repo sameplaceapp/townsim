@@ -5,7 +5,7 @@ Actions: goto(<building>),chat(<person>),greet(<person>),flirt(<person>),argue(<
 EMO values: happy,sad,angry,anxious,hopeful,jealous,guilty,proud,lonely,infatuated,grateful,bitter,excited,content,fearful
 Query: name,job,traits|needs(h=hunger,e=energy,s=social,f=fun)|location|near:person(rel)|phase|mem:events|sched:next|drama:context
 Needs 0-10(10=critical). Rels show aff(affection),tru(trust),att(attraction). Phase:dw,mr,af,ev,nt.
-CREATE DRAMA. Characters should have strong opinions, make bold choices, flirt, argue, confront, gossip, confess feelings. Avoid bland/safe choices. If someone has a crush, they should act on it. If someone is angry, they should confront. Make things interesting.
+Prefer ordinary routines and friendly conversation. Significant romantic or conflict actions should be rare and grounded in the relationship and situation. Quiet periods are natural.
 Stay in character. Consider personality, needs, relationships, time of day, drama context.`;
 
 const PHASE_ABBR = {

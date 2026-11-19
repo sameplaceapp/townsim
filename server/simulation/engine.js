@@ -254,6 +254,16 @@ class SimulationEngine {
               }
             }
 
+            // Apply the same pacing and context checks to rule-based and AI choices.
+            const targetChar = this.world.characters.find(c => c.id === result.action.target);
+            if (!this.dramaEngine.allowAction(result.character, targetChar, result.action.type)) {
+              result.action = this.dramaEngine.canInteract(result.character, targetChar)
+                ? { type: 'chat', target: targetChar.id } : { type: 'idle' };
+              result.say = null;
+              result.think = null;
+              result.emotion = null;
+            }
+
             this.actionManager.assignAction(result.character, result.action);
 
             if (result.action.type === 'goto' && result.action.target) {

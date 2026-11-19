@@ -3,7 +3,7 @@ services:
   townsim:
     build: .
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     environment:
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}

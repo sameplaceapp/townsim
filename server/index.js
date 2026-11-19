@@ -23,6 +23,12 @@ const wss = setupWebSocket(server);
 // Simulation engine
 const engine = new SimulationEngine(config, wss);
 
+// Send an authoritative snapshot on every connection, including reconnects
+// while the simulation is paused (when there may be no subsequent ticks).
+wss.on('connection', (ws) => {
+  ws.send(JSON.stringify({ type: 'snapshot', ...engine.getState() }));
+});
+
 // Make engine accessible to API routes
 app.set('engine', engine);
 
@@ -44,7 +50,10 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-server.listen(PORT, () => {
-  console.log(`TownSim running at http://localhost:${PORT}`);
+// FIX: Added '0.0.0.0' host variable to allow external network routing
+const HOST = '0.0.0.0';
+
+server.listen(PORT, HOST, () => {
+  console.log(`TownSim running at http://${HOST}:${PORT}`);
   console.log(`Tick interval: ${config.simulation.tickInterval}ms`);
 });

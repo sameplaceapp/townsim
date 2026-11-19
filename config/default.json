@@ -17,6 +17,12 @@
     "maxRetries": 3,
     "rateLimit": 10
   },
+  "drama": {
+    "eventChance": 0.12,
+    "conflictFrequency": 0.4,
+    "romanceFrequency": 0.5,
+    "cooldownHours": 18
+  },
   "world": {
     "gridWidth": 60,
     "gridHeight": 40,
