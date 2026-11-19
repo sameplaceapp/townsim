@@ -196,6 +196,7 @@
         ui.updateTime(timeString, data.phase);
         ui.updateSimulationStatus(data.timing, characters.length);
         if (data.log || data.activityLog) ui.updateLog(data.log || data.activityLog);
+        if (data.drama) ui.updateDrama(data.drama, characters);
         ui.updateCharacterList(characters);
         ui.updateCharacterPanel(characters, currentTick);
       }
@@ -253,6 +254,7 @@
         phase
       );
       if (worldState.activityLog) ui.updateLog(worldState.activityLog);
+      if (worldState.drama) ui.updateDrama(worldState.drama, characters);
       ui.updateCharacterList(characters);
 
       handleResize();

@@ -30,6 +30,8 @@ class UI {
     this.onFollowCallback = null;
     this.notifications = new NotificationManager();
     this._lastLogEntries = null;
+    this._drama = { activeStorylines: [], resolvedStorylines: [] };
+    this._dramaCharacters = [];
 
     this.setupPanelCollapse();
     this.setupEventFilters();
@@ -416,6 +418,9 @@ class UI {
 
   updateLog(entries) {
     if (!entries || entries.length === 0) return;
+    const logKey = this.activeFilter === 'drama' ? JSON.stringify(entries) : null;
+    const logChanged = logKey !== this._lastLogKey;
+    this._lastLogKey = logKey;
     this._lastLogEntries = entries;
 
     // Generate toast notifications for dramatic events
@@ -427,10 +432,20 @@ class UI {
       }
     }
 
-    this.renderEventFeed(entries);
+    if (this.activeFilter !== 'drama') this.renderEventFeed(entries);
+    else if (logChanged) this.renderDrama();
   }
 
   renderEventFeed(entries) {
+    if (this.activeFilter === 'drama') {
+      this.renderDrama();
+      return;
+    }
+    this.eventListEl.innerHTML = this.renderEventEntries(entries);
+    this.wireEventLinks();
+  }
+
+  renderEventEntries(entries) {
     const classified = entries.slice().reverse().map(entry => {
       const text = entry.text || '';
       const { category, icon } = this.notifications.classifyEvent(text);
@@ -438,7 +453,7 @@ class UI {
     });
 
     // Render event feed with active filter
-    this.eventListEl.innerHTML = classified
+    return classified
       .filter(entry => {
         if (this.activeFilter === 'all') return true;
         if (this.activeFilter === 'drama') return ['conflict', 'romance'].includes(entry.category);
@@ -464,6 +479,9 @@ class UI {
           </div>`;
       }).join('');
 
+  }
+
+  wireEventLinks() {
     // Wire click handlers on character name links
     this.eventListEl.querySelectorAll('.char-name-link').forEach(el => {
       el.addEventListener('click', (e) => {
@@ -474,6 +492,49 @@ class UI {
         }
       });
     });
+  }
+
+  updateDrama(drama, characters) {
+    const shown = story => [story.id, story.type, story.title, story.description, story.outcome,
+      story.resolution, story.participants, story.startTick, story.startDay, story.resolutionDay, story.resolvedDay];
+    const key = JSON.stringify([(drama.activeStorylines || []).map(shown),
+      (drama.resolvedStorylines || []).map(shown), characters.map(c => [c.id, c.name])]);
+    if (key === this._lastDramaKey) return;
+    this._lastDramaKey = key;
+    this._drama = drama;
+    this._dramaCharacters = characters;
+    if (this.activeFilter === 'drama') this.renderDrama();
+  }
+
+  renderDrama() {
+    const drama = this._drama;
+    const resolved = (drama.resolvedStorylines || []).slice().reverse().slice(0, 10);
+    const resolvedIds = new Set(resolved.map(s => s.id).filter(Boolean));
+    const active = (drama.activeStorylines || []).filter(s => !s.id || !resolvedIds.has(s.id))
+      .slice().sort((a, b) => {
+        if (Number.isFinite(a.startTick) && Number.isFinite(b.startTick)) return b.startTick - a.startTick;
+        return (b.startDay ?? -1) - (a.startDay ?? -1);
+      });
+    const names = new Map(this._dramaCharacters.map(c => [c.id, c.name]));
+    const renderStory = (story, isResolved) => {
+      const title = story.title || (story.type || 'Storyline').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+      const detail = isResolved ? (story.outcome || story.resolution || story.description) : story.description;
+      const participants = (story.participants || []).map(id => names.get(id) || id).join(', ');
+      const day = isResolved ? (story.resolutionDay ?? story.resolvedDay) : story.startDay;
+      return `<div class="event-card drama storyline-card"><div class="event-body">
+        <div class="storyline-title">${this.escapeHtml(String(title))}</div>
+        ${detail && typeof detail === 'string' ? `<div class="event-text">${this.escapeHtml(detail)}</div>` : ''}
+        ${participants ? `<div class="storyline-meta">${this.escapeHtml(participants)}</div>` : ''}
+        ${Number.isFinite(day) ? `<div class="storyline-meta">${isResolved ? 'Resolved' : 'Started'} Day ${day}</div>` : ''}
+      </div></div>`;
+    };
+    const activity = this._lastLogEntries ? this.renderEventEntries(this._lastLogEntries) : '';
+    this.eventListEl.innerHTML = `<section class="storyline-section"><h3>Active Drama</h3>
+      ${active.length ? active.map(s => renderStory(s, false)).join('') : '<p class="storyline-empty">No active drama right now.</p>'}
+      </section><section class="storyline-section"><h3>Recently Resolved</h3>
+      ${resolved.length ? resolved.map(s => renderStory(s, true)).join('') : '<p class="storyline-empty">No resolved drama yet.</p>'}</section>
+      ${activity ? `<section class="storyline-section"><h3>Drama Activity</h3>${activity}</section>` : ''}`;
+    this.wireEventLinks();
   }
 
   // ---- Panel Collapse ----
@@ -506,9 +567,7 @@ class UI {
         btn.classList.add('active');
         this.activeFilter = btn.dataset.filter;
         // Re-render immediately with stored entries
-        if (this._lastLogEntries) {
-          this.renderEventFeed(this._lastLogEntries);
-        }
+        this.renderEventFeed(this._lastLogEntries || []);
       });
     });
   }
