@@ -175,6 +175,7 @@
         // Update UI
         ui.updateTime(data.timeString, data.phase);
         if (data.log) ui.updateLog(data.log);
+        if (data.drama) ui.updateDrama(data.drama, characters);
         ui.updateCharacterList(characters);
         ui.updateCharacterPanel(characters, currentTick);
       }
@@ -230,6 +231,7 @@
         phase
       );
       if (worldState.activityLog) ui.updateLog(worldState.activityLog);
+      if (worldState.drama) ui.updateDrama(worldState.drama, characters);
       ui.updateCharacterList(characters);
 
       handleResize();

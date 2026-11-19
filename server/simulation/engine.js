@@ -365,16 +365,7 @@ class SimulationEngine {
       timeString: this.world.getTimeString(),
       characters: this.world.characters.map(c => c.toSummary()),
       log: this.world.activityLog.slice(-100),
-      drama: {
-        townMood: this.dramaEngine.townMood,
-        activeStorylines: this.dramaEngine.activeStorylines.map(s => ({
-          id: s.id,
-          type: s.type,
-          phase: s.phase,
-          tension: s.tension,
-          participants: s.participants
-        }))
-      }
+      drama: this.getDramaDisplayState()
     };
     this.wss.broadcast(state);
   }
@@ -384,9 +375,28 @@ class SimulationEngine {
       movementInterval: this.config.simulation.movementInterval, speed: this.speed, paused: this.paused || !this.running };
   }
 
+  getDramaDisplayState() {
+    const displayStory = s => ({
+      id: s.id, type: s.type, title: s.title, description: s.description,
+      outcome: s.outcome, resolution: s.resolution, participants: s.participants,
+      phase: s.phase, tension: s.tension, startTick: s.startTick,
+      startDay: s.startDay, resolutionDay: s.resolutionDay, resolvedDay: s.resolvedDay
+    });
+    const resolved = this.dramaEngine.resolvedStorylines;
+    // Older saves have no resolution dates; the engine appends them in resolution order.
+    const dated = resolved.every(s => Number.isFinite(s.resolutionDay ?? s.resolvedDay));
+    const recent = dated ? resolved.slice().sort((a, b) =>
+      (a.resolutionDay ?? a.resolvedDay) - (b.resolutionDay ?? b.resolvedDay)) : resolved;
+    return {
+      townMood: this.dramaEngine.townMood,
+      activeStorylines: this.dramaEngine.activeStorylines.map(displayStory),
+      resolvedStorylines: recent.slice(-10).map(displayStory)
+    };
+  }
+
   getState() {
     this.sync();
-    return { ...this.world.toJSON(), timing: this.getTiming() };
+    return { ...this.world.toJSON(), timing: this.getTiming(), drama: this.getDramaDisplayState() };
   }
 
   getStats() {
