@@ -7,8 +7,10 @@ services:
     environment:
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
-      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_KEY_FILE: /run/secrets/openrouter_api_key
       LLM_DAILY_LIMIT: ${LLM_DAILY_LIMIT:-0}
+    secrets:
+      - openrouter_api_key
     volumes:
       - townsim-data:/app/data
     restart: unless-stopped
@@ -21,3 +23,7 @@ services:
 volumes:
   townsim-data:
     name: ${WILLOWBROOK_VOLUME_NAME:-willowbrook-data}
+
+secrets:
+  openrouter_api_key:
+    file: ${OPENROUTER_SECRET_FILE:?Set OPENROUTER_SECRET_FILE to an absolute path outside the repository}
