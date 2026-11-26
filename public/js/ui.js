@@ -6,6 +6,7 @@ class UI {
 
     // Elements
     this.dayDisplayEl = document.getElementById('day-display');
+    this.yearDisplayEl = document.getElementById('year-display');
     this.timeDisplayEl = document.getElementById('time-display');
     this.phaseDisplayEl = document.getElementById('phase-display');
     this.phaseDotEl = document.getElementById('phase-dot');
@@ -64,12 +65,19 @@ class UI {
 
   // ---- Time display ----
 
+  setCalendar(calendar) {
+    this.calendarDaysPerYear = Number.isSafeInteger(calendar?.daysPerYear) && calendar.daysPerYear > 0 ? calendar.daysPerYear : null;
+  }
+
   updateTime(timeString, phase) {
     if (!this.connected) return;
     // Parse the timeString (e.g. "Day 3 14:30")
     const match = timeString.match(/Day\s+(\d+)\s+(\d{2}:\d{2})/);
     if (match) {
       this.dayDisplayEl.textContent = `Day ${match[1]}`;
+      if (this.yearDisplayEl && this.calendarDaysPerYear) {
+        this.yearDisplayEl.textContent = `Year ${Math.floor((Number(match[1]) - 1) / this.calendarDaysPerYear) + 1}`;
+      }
       this.timeDisplayEl.textContent = match[2];
     } else {
       this.timeDisplayEl.textContent = timeString;
@@ -105,6 +113,7 @@ class UI {
       this.connectionDotEl.title = text;
       this.connectionStatusEl.textContent = text === 'Connecting' ? 'Connecting' : 'Disconnected';
       this.dayDisplayEl.textContent = 'Day —';
+      if (this.yearDisplayEl) this.yearDisplayEl.textContent = 'Year —';
       this.timeDisplayEl.textContent = '--:--';
       this.phaseDisplayEl.textContent = '';
       this.phaseDotEl.style.background = 'transparent';

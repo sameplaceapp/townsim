@@ -10,6 +10,7 @@ services:
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_DAILY_LIMIT: ${LLM_DAILY_LIMIT:-0}
+      CALENDAR_DAYS_PER_YEAR: ${CALENDAR_DAYS_PER_YEAR:-}
     volumes:
       - townsim-data:/app/data
     restart: unless-stopped

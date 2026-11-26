@@ -8,7 +8,7 @@ const UI = vm.runInNewContext(`${source}\nUI`);
 const element = () => ({ textContent: '', title: '', className: '', style: {} });
 function makeUI() {
   const ui = Object.create(UI.prototype);
-  for (const name of ['dayDisplayEl', 'timeDisplayEl', 'phaseDisplayEl', 'phaseDotEl', 'connectionDotEl', 'connectionStatusEl', 'simulationStatusEl', 'charCountEl']) ui[name] = element();
+  for (const name of ['yearDisplayEl', 'dayDisplayEl', 'timeDisplayEl', 'phaseDisplayEl', 'phaseDotEl', 'connectionDotEl', 'connectionStatusEl', 'simulationStatusEl', 'charCountEl']) ui[name] = element();
   ui.connected = false;
   return ui;
 }
@@ -16,7 +16,9 @@ function makeUI() {
 test('status displays server state, zero residents, and clears stale values on disconnect', () => {
   const ui = makeUI();
   ui.setStatus('Connected');
+  ui.setCalendar({daysPerYear:12});
   ui.updateTime('Day 3 12:30', 'afternoon');
+  assert.equal(ui.yearDisplayEl.textContent, 'Year 1');
   ui.updateSimulationStatus({paused:false,speed:2}, 12);
   assert.equal(ui.dayDisplayEl.textContent, 'Day 3');
   assert.equal(ui.timeDisplayEl.textContent, '12:30');
@@ -30,6 +32,7 @@ test('status displays server state, zero residents, and clears stale values on d
   ui.updateSimulationStatus({paused:false,speed:5}, 12);
   assert.equal(ui.connectionStatusEl.textContent, 'Disconnected');
   assert.equal(ui.timeDisplayEl.textContent, '--:--');
+  assert.equal(ui.yearDisplayEl.textContent, 'Year —');
   assert.equal(ui.charCountEl.textContent, '—');
   assert.equal(ui.simulationStatusEl.textContent, '—');
   ui.setStatus('Connected');
@@ -38,4 +41,7 @@ test('status displays server state, zero residents, and clears stale values on d
   assert.equal(ui.timeDisplayEl.textContent, '13:00');
   assert.equal(ui.simulationStatusEl.textContent, 'Running 5×');
   assert.equal(ui.charCountEl.textContent, '11');
+  ui.updateTime('Day 13 00:00', 'night');
+  assert.equal(ui.yearDisplayEl.textContent, 'Year 2');
+  assert.equal(ui.dayDisplayEl.textContent, 'Day 13');
 });

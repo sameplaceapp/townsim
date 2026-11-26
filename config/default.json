@@ -10,6 +10,9 @@
     "decisionCooldown": 2,
     "reflectionChance": 0.02
   },
+  "calendar": {
+    "daysPerYear": 12
+  },
   "llm": {
     "maxTokens": 1024,
     "temperature": 0.7,
