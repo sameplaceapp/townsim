@@ -3,6 +3,7 @@ class InteractionManager {
     this.dramaEngine = null; // Set externally by engine.js
     this.historyIntegration = null;
     this.partnerships = null;
+    this.marriages = null;
   }
 
   updateRelationship(charA, charB, action) {
@@ -103,6 +104,7 @@ class InteractionManager {
       this.dramaEngine.onInteraction(charA, charB, action);
     }
     if (this.partnerships) this.partnerships.onInteraction(charA, charB, action);
+    if (this.marriages) this.marriages.onInteraction(charA, charB, action);
   }
 
   ensureRelationship(charA, charB) {

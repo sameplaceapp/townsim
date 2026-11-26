@@ -3,7 +3,7 @@ const { isDeepStrictEqual } = require('node:util');
 // Event types are deliberately explicit; add a new type when a simulation
 // system is ready to record it, without changing the stored schema.
 const EVENT_TYPES = Object.freeze([
-  'relationship_changed', 'conflict', 'birthday_milestone', 'marriage', 'separation', 'birth', 'death',
+  'relationship_changed', 'conflict', 'birthday_milestone', 'marriage', 'separation', 'divorce', 'birth', 'death',
   'occupation_changed', 'property_transferred', 'building_constructed',
   'settlement_founded', 'settlement_expanded', 'community_event'
 ]);
@@ -143,6 +143,7 @@ class WorldHistory {
   toJSON() { return { version: 1, events: this.#events.slice() }; }
 
   lastId() { return this.#events.at(-1)?.id ?? null; }
+  get(id) { return this.#byId.get(id) ?? null; }
   count() { return this.#events.length; }
   countsByType() { return { ...this.#counts }; }
 
@@ -157,7 +158,7 @@ class WorldHistory {
       count++;
       const group = event.metadata.storylineId ? `story:${event.metadata.storylineId}` :
         `${event.type}:${event.metadata.milestone || ''}:${event.entities.map(e => `${e.kind}:${e.id}`).sort().join('|')}`;
-      const score = (event.type === 'community_event' ? 8 : event.type === 'conflict' ? 6 : 4) +
+      const score = (['marriage','divorce'].includes(event.type) ? 9 : event.type === 'separation' || event.type === 'community_event' ? 8 : event.type === 'conflict' ? 6 : 4) +
         (event.metadata.stage === 'concluded' || event.metadata.milestone === 'reconciliation' ? 3 : 0) +
         Math.min(2, event.entities.filter(e => e.kind === 'character').length);
       const candidate = { event, group, score, index:i };

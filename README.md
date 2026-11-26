@@ -491,3 +491,22 @@ fixture_pid=$!
 ```
 
 Open `http://127.0.0.1:3017` in Chromium. The terminal identifies the compatible adult pair. Inspect their profiles; both start single. Run `kill -USR1 "$fixture_pid"` three times, waiting for the confirmation after each. In this disposable fixture only, each signal advances to the next simulated day and applies one accepted, paced flirt, alternating initiators. After the third, both profiles should identify each other; selecting the partner link opens their profile. History shows the formation event. Stop with `kill -TERM "$fixture_pid"` and run the same `serve` command again to confirm the partnership persists. The fixture binds only to localhost, uses no LLM, and refuses to overwrite an existing file. It is not a production control.
+
+### Marriage, separation and divorce
+
+Some established adult partners may marry after at least 12 simulation days together, strong mutual relationships, compatible personalities and interest expressed by both across at least three days. The decision is deterministic and not every couple will marry. Marriage uses the existing exclusive partnership and does not create separate relationship scores.
+
+When existing partnership logic detects severe strain over three different days, married partners become **separated** instead of immediately ending their partnership. Separated spouses remain exclusive. They may reconcile through an accepted supportive interaction once both relationships are strong again. After at least six days separated, three further days of severe conflict can lead to divorce; divorce ends the partnership and applies the existing partnership cooldown. An eligible later partnership can lead to remarriage. No ceremonies, households, custody or property rules are included.
+
+The shared marriage record preserves spouses, simulation dates, status and event references, including previous separations and divorces. The profile shows marital status, current spouse and up to five previous spouses; full records stay in the world save. Marriage, remarriage, separation and divorce appear in permanent History and welcome-back summaries. Older worlds begin with no marriages. Current kinship limitations remain: known parent IDs and available parent records are checked, but the game has no complete family tree. Back up world data before upgrading or rolling back; older versions cannot preserve marriage state and may not recognize the new `divorce` history type.
+
+To inspect a controlled test without affecting a real world:
+
+```bash
+npm ci
+node scripts/marriage-demo.js create /tmp/willowbrook-marriage-check.json
+node scripts/marriage-demo.js serve /tmp/willowbrook-marriage-check.json &
+fixture_pid=$!
+```
+
+The terminal names the established test partners. Open `http://127.0.0.1:3017` in Chromium and inspect both profiles. Run `kill -USR1 "$fixture_pid"` three times, waiting for the confirmation after each. In this disposable fixture only, each signal advances to an eligible simulated day and applies an accepted supportive interaction, alternating residents. Both profiles should show Married and link to the spouse; History shows the marriage. Stop with `kill -TERM "$fixture_pid"` and start the same `serve` command again to verify persistence. This fixture binds only to localhost, uses no LLM, and refuses to overwrite an existing file. It is not a production control.

@@ -380,6 +380,16 @@ class UI {
         ? `<button type="button" class="partner-link" id="detail-partner">${this.escapeHtml(partner.name)} ↗</button>`
         : `<span>${this.escapeHtml(char.partnerId)} (not currently in town)</span>`
       : '<span>Single</span>';
+    const personLink = id => {
+      const person = characters.find(c => c.id === id);
+      return person ? `<button type="button" class="partner-link marital-person" data-person-id="${this.escapeHtml(id)}">${this.escapeHtml(person.name)} ↗</button>`
+        : `<span>${this.escapeHtml(id)} (not currently in town)</span>`;
+    };
+    const maritalLabels = { married:'Married', separated:'Separated', divorced:'Divorced', never_married:'Never married' };
+    const maritalStatus = maritalLabels[char.maritalStatus] || 'Never married';
+    const spouseHtml = char.spouseId ? `<div>Spouse: ${personLink(char.spouseId)}</div>` : '';
+    const previousHtml = Array.isArray(char.previousSpouses) && char.previousSpouses.length
+      ? `<div>Previous spouses: ${char.previousSpouses.map(p => personLink(p.id)).join(' ')}</div>` : '';
 
     this.charDetailEl.innerHTML = `
       <div class="char-detail-nav">
@@ -396,6 +406,7 @@ class UI {
         </div>
       </div>
       <div class="char-section"><div class="char-section-title">Partnership</div>${partnerHtml}</div>
+      <div class="char-section"><div class="char-section-title">Marital status</div><div>${maritalStatus}</div>${spouseHtml}${previousHtml}</div>
       <div class="char-section">
         <div class="char-section-title">Needs</div>
         ${needBars}
@@ -415,6 +426,9 @@ class UI {
     if (partner) document.getElementById('detail-partner').addEventListener('click', () => {
       if (this.onDirectorySelect) this.onDirectorySelect(partner.id);
     });
+    this.charDetailEl.querySelectorAll('.marital-person').forEach(el => el.addEventListener('click', () => {
+      if (this.onDirectorySelect && characters.some(c => c.id === el.dataset.personId)) this.onDirectorySelect(el.dataset.personId);
+    }));
     document.getElementById('detail-back').addEventListener('click', () => {
       this.selectedCharId = null;
       this.charDetailEl.style.display = 'none';

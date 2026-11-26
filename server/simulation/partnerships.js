@@ -106,8 +106,13 @@ class Partnerships {
     if(!p.strain||day-p.strain.lastDay>12) p.strain={days:1,lastDay:day};
     else if(day>p.strain.lastDay){p.strain.days++;p.strain.lastDay=day;}
     if(p.strain.days<3)return;
+    if(this.marriages?.separate(p)) { delete p.strain; return; }
     if(!this.record(`partnership:${p.id}:ended`,'A romantic partnership ended',p.partners,
         {milestone:'partnership_ended',partnershipId:p.id,startedDay:p.startedDay}))return;
+    this.endForDivorce(p,day);
+  }
+  endForDivorce(p,day) {
+    this.marriages?.forgetPartnership(p.id);
     this.active.delete(p.id);
     for(const id of p.partners){this.byCharacter.delete(id);this.cooldowns[id]=day+FORMATION_COOLDOWN;}
     this.clearCourtships(p.partners);
