@@ -155,3 +155,15 @@ test('ending an unmarried partnership clears marriage intent before the next sav
     assert.equal(restored.marriages.info(a.id).maritalStatus,'never_married');
   } finally {Math.random=oldRandom;fs.rmSync(f.dir,{recursive:true,force:true});}
 });
+
+test('marriage intent continues across a restart without repeating its first interaction',()=>{
+  const f=setup(),oldRandom=Math.random;let {engine,a,b}=f;
+  try {
+    Math.random=()=>0;partner(engine,a,b);apply(engine,a,b,'comfort',15);
+    const ids=[a.id,b.id];engine.save();engine=new SimulationEngine(config,null,()=>0,new StateManager(f.file));instrument(engine);
+    a=engine.world.characters.find(c=>c.id===ids[0]);b=engine.world.characters.find(c=>c.id===ids[1]);
+    apply(engine,b,a,'comfort',16);assert.equal(engine.marriages.info(a.id).maritalStatus,'never_married');
+    apply(engine,a,b,'comfort',17);assert.equal(engine.marriages.info(a.id).maritalStatus,'married');
+    assert.equal(engine.history.query({type:'marriage'}).events.length,1);
+  } finally {Math.random=oldRandom;fs.rmSync(f.dir,{recursive:true,force:true});}
+});
