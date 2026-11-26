@@ -28,12 +28,14 @@
   const renderer = new Renderer(bgCanvas, fgCanvas, camera, TILE_SIZE);
   const interpolator = new Interpolator();
   const ui = new UI();
+  const townStatistics = new TownStatisticsPanel(() => history.close(false));
   const welcome = new WelcomeBack(() => history.open());
   const history = new HistoryPanel(id => {
     document.getElementById('character-tray').classList.remove('collapsed');
     document.getElementById('character-tray').classList.add('active-mobile');
     ui.onDirectorySelect(id);
   });
+  history.onOpen = () => townStatistics.close(false);
 
   function parseClock(timeString) {
     const m = /Day\s+(\d+)\s+(\d+):(\d+)/.exec(timeString || '');

@@ -60,6 +60,25 @@ router.get('/history', (req, res) => {
   }
 });
 
+router.get('/town-statistics', (req, res) => {
+  const {beforeDay, limit = '50'} = req.query;
+  if (typeof limit !== 'string' || !/^\d+$/.test(limit) ||
+      (beforeDay !== undefined && (typeof beforeDay !== 'string' || !/^\d+$/.test(beforeDay)))) {
+    return res.status(400).json({error:'Invalid statistics query'});
+  }
+  const engine = req.app.get('engine');
+  engine.sync();
+  try {
+    const population = engine.townStatistics.page({limit:Number(limit), beforeDay:beforeDay === undefined ? undefined : Number(beforeDay)});
+    res.json({time:{...engine.world.time}, population:engine.world.characters.length,
+      buildings:Object.keys(engine.world.buildings).length,
+      historyCount:engine.history.count(), eventCounts:engine.history.countsByType(), ...population});
+  } catch (err) {
+    if (err instanceof TypeError) return res.status(400).json({error:'Invalid statistics query'});
+    throw err;
+  }
+});
+
 router.get('/config', (req, res) => {
   const engine = req.app.get('engine');
   const cfg = { ...engine.config };

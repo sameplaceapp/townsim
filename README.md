@@ -422,3 +422,19 @@ fixture_pid=$!
 2. In the same terminal, run `kill -USR1 "$fixture_pid"`. This advances time and applies one existing friendship interaction **only in the test fixture**, then saves it.
 3. Reopen the same address in the same Chromium profile. The report should show the event and elapsed simulated time. Select **Explore the town history** to investigate it, or dismiss it; refreshing should not repeat that event.
 4. Stop the fixture with `kill -TERM "$fixture_pid"`. The fixture binds only to localhost and refuses to overwrite an existing file. The signal-based trigger is only for this test; normal gameplay records qualifying events automatically.
+
+### Town statistics
+
+Select **Stats** in the top bar to inspect current residents, existing buildings, and permanent historical-event counts. Values are current when the panel opens or when you select **Refresh**; the existing top bar continues to show live time and population. Category totals are derived from stored events, not AI estimates.
+
+At each transition to a new simulation day, the server records the active population at the end of the day just completed. Observations are saved with the world and its previous-save `.bak`, with at most one per day. An older world has no observations before this feature starts; missing days are not filled in. The population chart displays individual measured points, not an interpolated line. Use **Older days** and **Newer days** to view bounded pages of up to 50 observations. The read-only `/api/town-statistics` endpoint exposes the same data; `limit` is 1–100 and `beforeDay` pages backwards.
+
+To test without touching your real world, use an unused absolute path:
+
+```bash
+npm ci
+node scripts/town-statistics-demo.js create /tmp/willowbrook-statistics-check.json
+node scripts/town-statistics-demo.js serve /tmp/willowbrook-statistics-check.json
+```
+
+Open `http://127.0.0.1:3017` in Chromium and select **Stats**. Compare the population with the top-bar resident count and the totals from `/api/town-statistics`; check the category counts, the unchanged-population dots and the older/newer pages. Day 31 is intentionally missing in the fixture. Stop the fixture server with Ctrl+C and start it again with the same `serve` command to check the observations persist. The fixture binds only to localhost, uses no AI, and refuses to overwrite existing files. Its population changes are controlled test data, not new gameplay mechanics.
