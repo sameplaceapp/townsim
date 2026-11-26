@@ -232,7 +232,7 @@ class World {
     );
   }
 
-  toJSON() {
+  toJSON(calendar) {
     return {
       tick: this.tick,
       time: { ...this.time },
@@ -241,7 +241,7 @@ class World {
       gridHeight: this.gridHeight,
       grid: this.grid,
       buildings: this.buildings,
-      characters: this.characters.map(c => c.toDetail()),
+      characters: this.characters.map(c => c.toDetail(calendar)),
       activityLog: this.activityLog.slice(-50)
     };
   }

@@ -456,3 +456,21 @@ node scripts/calendar-demo.js serve /tmp/willowbrook-calendar-check.json
 ```
 
 Open `http://127.0.0.1:3017` in Chromium. The isolated fixture begins paused at Year 1, Day 12, 23:59. Select 5× to see Year 2, Day 13 after about one real second; pause to inspect it. `/api/state` shows the same server calendar. Stop the fixture with Ctrl+C and run the same `serve` command again to verify the calendar survives restart. Choose a different absolute path if the fixture exists. It binds only to localhost and never overwrites a real save.
+
+### Ages and birthdays
+
+A resident's age is derived from their saved `birthDate` (calendar year and day of year) and the current simulation date. Years before the town's Year 1 can be zero or negative, allowing founding adults without changing the town calendar. Age is not stored as a separate changing number. The character profile shows age and birthday; `/api/characters` and `/api/character/<id>` also return them.
+
+For an older world, residents without a birth date receive deterministic, varied adult ages and birthdays based on their existing IDs and the world's saved year length. Existing valid `age` and `birthday` fields are used when present and converted into the single birth date. Existing valid birth dates are retained. Invalid or conflicting prior age information stops startup rather than being silently overwritten. The migration becomes durable on the next successful world save; as with other unsaved changes, an abrupt crash before saving can lose it. It does not alter residents' relationships, personalities, jobs, or memories.
+
+Age changes at the start of the resident's birthday in simulation time, with no wall-clock timer. Ordinary birthdays do not create historical records. Birthdays at ages 10, 20, 30 and so on create one `birthday_milestone` record, which can be explored in History; age remains accurate even without a record. Older application versions may not recognize this new event type, so retain a separate world backup before upgrading or rolling back. This does not introduce childhood behavior, aging restrictions, reproduction, or mortality. Future systems adding residents should supply a valid `birthDate` when creating them.
+
+To check birthdays in an isolated world:
+
+```bash
+npm ci
+node scripts/aging-demo.js create /tmp/willowbrook-aging-check.json
+node scripts/aging-demo.js serve /tmp/willowbrook-aging-check.json
+```
+
+Open `http://127.0.0.1:3017` in Chromium. The fixture is paused at Year 1, Day 12, 23:59: Alice is 29 with a birthday on day 1 of the year, and Bob is 31 with a birthday on day 6. Select each through Townsfolk to inspect their profiles. Select 5×, wait for Year 2, Day 13, and pause: Alice should be 30 while Bob remains 31. `/api/characters` shows the same values, and History contains Alice's age-30 milestone. Stop with Ctrl+C and repeat the `serve` command to verify the ages and milestone persist. The fixture uses no LLM, binds only to localhost, and refuses to overwrite an existing file.

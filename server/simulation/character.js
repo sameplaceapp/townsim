@@ -1,4 +1,5 @@
 const charsConfig = require('../../config/characters.json');
+const { ageOnDate } = require('./aging');
 
 class Character {
   constructor(def, spawnPos) {
@@ -9,6 +10,9 @@ class Character {
     this.color = def.color || '#a0a0a0';
     this.home = def.home;
     this.workplace = def.workplace;
+    if (def.birthDate !== undefined) this.birthDate = def.birthDate;
+    if (def.age !== undefined) this.age = def.age;
+    if (def.birthday !== undefined) this.birthday = def.birthday;
 
     // Compressed personality for LLM prompts
     this.personalityAbbr = def.personality
@@ -130,8 +134,11 @@ class Character {
     return `h${Math.round(this.needs.hunger)}e${Math.round(this.needs.energy)}s${Math.round(this.needs.social)}f${Math.round(this.needs.fun)}`;
   }
 
-  toSummary() {
+  toSummary(calendar) {
+    const birth = calendar && this.birthDate ? { age: ageOnDate(this.birthDate, calendar.current()),
+      birthday: this.birthDate.dayOfYear, birthDate: { ...this.birthDate } } : {};
     return {
+      ...birth,
       id: this.id,
       name: this.name,
       job: this.job,
@@ -154,9 +161,9 @@ class Character {
     };
   }
 
-  toDetail() {
+  toDetail(calendar) {
     return {
-      ...this.toSummary(),
+      ...this.toSummary(calendar),
       personality: this.personality,
       needs: { ...this.needs },
       relationships: { ...this.relationships },

@@ -8,7 +8,7 @@ router.get('/state', (req, res) => {
 
 router.get('/characters', (req, res) => {
   const engine = req.app.get('engine');
-  const chars = engine.world.characters.map(c => c.toSummary());
+  const chars = engine.world.characters.map(c => c.toSummary(engine.calendar));
   res.json(chars);
 });
 
@@ -16,7 +16,7 @@ router.get('/character/:id', (req, res) => {
   const engine = req.app.get('engine');
   const char = engine.world.characters.find(c => c.id === req.params.id);
   if (!char) return res.status(404).json({ error: 'Character not found' });
-  res.json(char.toDetail());
+  res.json(char.toDetail(engine.calendar));
 });
 
 router.get('/log', (req, res) => {
