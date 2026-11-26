@@ -496,7 +496,7 @@ Open `http://127.0.0.1:3017` in Chromium. The terminal identifies the compatible
 
 Some established adult partners may marry after at least 12 simulation days together, strong mutual relationships, compatible personalities and interest expressed by both across at least three days. The decision is deterministic and not every couple will marry. Marriage uses the existing exclusive partnership and does not create separate relationship scores.
 
-When existing partnership logic detects severe strain over three different days, married partners become **separated** instead of immediately ending their partnership. Separated spouses remain exclusive. They may reconcile through an accepted supportive interaction once both relationships are strong again. After at least six days separated, three further days of severe conflict can lead to divorce; divorce ends the partnership and applies the existing partnership cooldown. An eligible later partnership can lead to remarriage. No ceremonies, households, custody or property rules are included.
+When existing partnership logic detects severe strain over three different days, married partners become **separated** instead of immediately ending their partnership. Separated spouses remain exclusive. They may reconcile through an accepted supportive interaction once both relationships are strong again. After at least six days separated, three further days of severe conflict can lead to divorce; divorce ends the partnership and applies the existing partnership cooldown. An eligible later partnership can lead to remarriage. No ceremonies, custody or property rules are included.
 
 The shared marriage record preserves spouses, simulation dates, status and event references, including previous separations and divorces. The profile shows marital status, current spouse and up to five previous spouses; full records stay in the world save. Marriage, remarriage, separation and divorce appear in permanent History and welcome-back summaries. Older worlds begin with no marriages. Current kinship limitations remain: known parent IDs and available parent records are checked, but the game has no complete family tree. Back up world data before upgrading or rolling back; older versions cannot preserve marriage state and may not recognize the new `divorce` history type.
 
@@ -510,3 +510,20 @@ fixture_pid=$!
 ```
 
 The terminal names the established test partners. Open `http://127.0.0.1:3017` in Chromium and inspect both profiles. Run `kill -USR1 "$fixture_pid"` three times, waiting for the confirmation after each. In this disposable fixture only, each signal advances to an eligible simulated day and applies an accepted supportive interaction, alternating residents. Both profiles should show Married and link to the spouse; History shows the marriage. Stop with `kill -TERM "$fixture_pid"` and start the same `serve` command again to verify persistence. This fixture binds only to localhost, uses no LLM, and refuses to overwrite an existing file. It is not a production control.
+
+
+### Households and residences
+
+Existing residents are grouped by their current valid homes when an older world first loads; residents without a valid home remain unassigned. A home has a default capacity of four unless its building specifies a capacity. Existing residents and schedules are preserved, even if an older save already exceeds that capacity. Established adult partners may share a home after sustained mutual interactions; marriage is not required. After a partnership ends, the resident who moved in can move to a vacant home after a cooldown. If no suitable home is available, they remain together until one becomes available. Household and residence information is available in resident profiles. Household formation and moves appear in History and are included in the saved world and backups.
+
+To try this without touching your real world, run these commands from the repository in a terminal (choose a different path if the file already exists):
+
+```sh
+node scripts/household-demo.js create /tmp/willowbrook-household-check.json
+node scripts/household-demo.js serve /tmp/willowbrook-household-check.json &
+fixture_pid=$!
+```
+
+The output identifies two established partners living in separate homes. Open `http://127.0.0.1:3017` in Chromium, select either resident, and inspect the Household section; select another resident to see a single-person household. Run `kill -USR1 "$fixture_pid"` three times, waiting for each confirmation. Each signal advances this disposable fixture to a suitable simulated day and applies an accepted social interaction. The partners' profiles should now identify the same residence and link to each other, and History should show their shared household. Stop the server with `kill -TERM "$fixture_pid"`, then run the same `serve` command again to confirm the profiles and history persist. Stop it with Ctrl+C when finished. The fixture binds to localhost, requires no AI, refuses to overwrite an existing file, and does not affect production data.
+
+Older versions of Willowbrook cannot preserve household records. Back up the world before upgrading or rolling back.

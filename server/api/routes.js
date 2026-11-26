@@ -8,7 +8,7 @@ router.get('/state', (req, res) => {
 
 router.get('/characters', (req, res) => {
   const engine = req.app.get('engine');
-  const chars = engine.world.characters.map(c => ({...c.toSummary(engine.calendar),partnerId:engine.partnerships.partnerOf(c.id),...engine.marriages.info(c.id)}));
+  const chars = engine.world.characters.map(c => ({...c.toSummary(engine.calendar),partnerId:engine.partnerships.partnerOf(c.id),...engine.marriages.info(c.id),...engine.getHousingSummary(c.id)}));
   res.json(chars);
 });
 
@@ -16,7 +16,19 @@ router.get('/character/:id', (req, res) => {
   const engine = req.app.get('engine');
   const char = engine.world.characters.find(c => c.id === req.params.id);
   if (!char) return res.status(404).json({ error: 'Character not found' });
-  res.json({...char.toDetail(engine.calendar),partnerId:engine.partnerships.partnerOf(char.id),...engine.marriages.info(char.id)});
+  res.json({...char.toDetail(engine.calendar),partnerId:engine.partnerships.partnerOf(char.id),...engine.marriages.info(char.id),...engine.getHousingSummary(char.id),household:engine.households.info(char.id)});
+});
+
+router.get('/households/:id', (req, res) => {
+  const household=req.app.get('engine').households.records.get(req.params.id);
+  if(!household)return res.status(404).json({error:'Household not found'});
+  res.json(household);
+});
+
+router.get('/building/:id/households', (req, res) => {
+  const engine=req.app.get('engine'), building=engine.world.buildings[req.params.id];
+  if(!building)return res.status(404).json({error:'Building not found'});
+  res.json({buildingId:req.params.id,households:[...engine.households.records.values()].filter(h=>h.status==='active'&&h.residenceId===req.params.id)});
 });
 
 router.get('/log', (req, res) => {

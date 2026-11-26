@@ -16,6 +16,7 @@ const { Calendar } = require('./calendar');
 const { migrateBirthDates, recordBirthdayMilestones } = require('./aging');
 const { Partnerships } = require('./partnerships');
 const { Marriages } = require('./marriages');
+const { Households } = require('./households');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -60,9 +61,12 @@ class SimulationEngine {
     this.partnerships = new Partnerships(this.world, this.calendar, this.history, savedState?.partnerships);
     this.marriages = new Marriages(this.world, this.calendar, this.history, this.partnerships, savedState?.marriages);
     this.partnerships.marriages = this.marriages;
+    this.households = new Households(this.world, this.worldId, this.calendar, this.history, this.partnerships, savedState?.households);
+    this.partnerships.households = this.households;
     this.calendar.on('day', date => recordBirthdayMilestones(this.world.characters, this.historyIntegration, date));
     this.calendar.on('day', date => this.partnerships.prune(date.absoluteDay));
     this.calendar.on('day', date => this.marriages.prune(date.absoluteDay));
+    this.calendar.on('day', date => this.households.dayStarted(date.absoluteDay));
 
     // Initialize subsystems
     this.pathFinder = new PathFinder(this.world);
@@ -78,6 +82,7 @@ class SimulationEngine {
     this.interactions.historyIntegration = this.historyIntegration;
     this.interactions.partnerships = this.partnerships;
     this.interactions.marriages = this.marriages;
+    this.interactions.households = this.households;
     this.dramaEngine.historyIntegration = this.historyIntegration;
     this.llmBatcher.promptBuilder.dramaEngine = this.dramaEngine;
 
@@ -405,7 +410,7 @@ class SimulationEngine {
       calendar: this.calendar?.current(),
       phase: this.world.phase,
       timeString: this.world.getTimeString(),
-      characters: this.world.characters.map(c => ({ ...c.toSummary(this.calendar), partnerId: this.partnerships?.partnerOf(c.id) ?? null, ...this.marriages?.info(c.id) })),
+      characters: this.world.characters.map(c => ({ ...c.toSummary(this.calendar), partnerId: this.partnerships?.partnerOf(c.id) ?? null, ...this.marriages?.info(c.id), ...this.getHousingSummary(c.id) })),
       log: this.world.activityLog.slice(-100),
       drama: this.getDramaDisplayState()
     };
@@ -439,12 +444,17 @@ class SimulationEngine {
   getState() {
     this.sync();
     const world = this.world.toJSON(this.calendar);
-    world.characters = world.characters.map(c => ({ ...c, partnerId: this.partnerships?.partnerOf(c.id) ?? null, ...this.marriages?.info(c.id) }));
+    world.characters = world.characters.map(c => ({ ...c, partnerId: this.partnerships?.partnerOf(c.id) ?? null, ...this.marriages?.info(c.id), ...this.getHousingSummary(c.id) }));
     return { ...world, timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker(), calendar: this.calendar?.current() };
   }
 
   getVisitMarker() { return { worldId: this.worldId, lastEventId: this.history?.lastId() ?? null,
     eventCount: this.history?.count() ?? 0, time: { ...this.world.time } }; }
+
+  getHousingSummary(id) {
+    const row=this.households?.byMember.get(id);
+    return {householdId:row?.id ?? null,householdResidenceId:row?.residenceId ?? null};
+  }
 
   getStats() {
     this.sync();
@@ -481,6 +491,7 @@ class SimulationEngine {
     worldData.historyIntegration = this.historyIntegration.toJSON();
     worldData.partnerships = this.partnerships.toJSON();
     worldData.marriages = this.marriages.toJSON();
+    worldData.households = this.households.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 
