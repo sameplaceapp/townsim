@@ -139,6 +139,8 @@ class Character {
       birthday: this.birthDate.dayOfYear, birthDate: { ...this.birthDate } } : {};
     return {
       ...birth,
+      lifecycle: this.lifecycle || 'adult',
+      parentIds: Array.isArray(this.parentIds) ? [...this.parentIds] : [],
       id: this.id,
       name: this.name,
       job: this.job,

@@ -458,7 +458,7 @@ class DramaEngine {
   }
 
   findBestSeed(tick) {
-    const chars = this.world.characters;
+    const chars = this.world.characters.filter(c => c.lifecycle !== 'dependent');
 
     // 1. Look for natural love triangle opportunities
     for (const charA of chars) {

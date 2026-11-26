@@ -31,6 +31,11 @@ router.get('/building/:id/households', (req, res) => {
   res.json({buildingId:req.params.id,households:[...engine.households.records.values()].filter(h=>h.status==='active'&&h.residenceId===req.params.id)});
 });
 
+router.get('/reproduction-status', (req, res) => {
+  const system=req.app.get('engine').reproduction;
+  res.json({pending:system.pending.map(p=>({...p})),deferred:{...system.deferred},config:{...system.config}});
+});
+
 router.get('/log', (req, res) => {
   const engine = req.app.get('engine');
   res.json(engine.world.activityLog);
