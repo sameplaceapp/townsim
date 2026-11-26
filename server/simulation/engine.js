@@ -10,6 +10,7 @@ const { LLMBatcher } = require('../llm/batcher');
 const { StateManager } = require('../persistence/stateManager');
 const { WorldHistory } = require('../history/worldHistory');
 const { HistoricalEventIntegration } = require('../history/eventIntegration');
+const { randomUUID } = require('node:crypto');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -38,6 +39,7 @@ class SimulationEngine {
     // Initialize world
     this.stateManager = stateManager;
     const savedState = this.stateManager.load();
+    this.worldId = savedState?.worldId || randomUUID();
     this.world = new World(config);
 
     if (savedState) {
@@ -378,6 +380,7 @@ class SimulationEngine {
       timing: this.getTiming(),
       tick: this.world.tick,
       time: { ...this.world.time },
+      visitMarker: this.getVisitMarker(),
       phase: this.world.phase,
       timeString: this.world.getTimeString(),
       characters: this.world.characters.map(c => c.toSummary()),
@@ -413,8 +416,11 @@ class SimulationEngine {
 
   getState() {
     this.sync();
-    return { ...this.world.toJSON(), timing: this.getTiming(), drama: this.getDramaDisplayState() };
+    return { ...this.world.toJSON(), timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker() };
   }
+
+  getVisitMarker() { return { worldId: this.worldId, lastEventId: this.history?.lastId() ?? null,
+    eventCount: this.history?.count() ?? 0, time: { ...this.world.time } }; }
 
   getStats() {
     this.sync();
@@ -438,6 +444,7 @@ class SimulationEngine {
     // Save drama state alongside world state
     const worldData = this.world.toJSON();
     worldData.version = 1;
+    worldData.worldId = this.worldId;
     worldData.activityLog = this.world.activityLog;
     worldData.lastScheduleHour = this.lastScheduleHour;
     worldData.timingProgress = { minute: this.minuteProgress, logic: this.logicProgress, movement: this.movementProgress };

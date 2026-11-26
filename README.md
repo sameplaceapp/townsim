@@ -402,3 +402,23 @@ node scripts/history-timeline-demo.js serve /tmp/willowbrook-timeline-check.json
 Open `http://127.0.0.1:3017`, select **History**, apply the Conflict category and resident `alice`, and use **Load older events**. Clear filters, select an entry, inspect its details, and select an active resident to locate them. Entries involving `former_resident` demonstrate an unavailable historical reference. Stop the fixture server with Ctrl+C and run the same `serve` command again; the records should remain. The fixture has 80 representative test events, binds only to localhost, and refuses to overwrite an existing file. A production world may have no events until significant developments occur.
 
 For reverse chronological API pages use `order=desc&limit=25`, then send `before=<nextBefore>` from each response. A cursor preserves your place if new records arrive; refresh from the first page to see them. `fromDay` and `toDay` filter by inclusive simulation day on the server. The existing ascending `offset` API remains available. Filtering scans history on the server, so very large archives may increase query time; records are not copied into regular simulation updates.
+
+### While you were away
+
+On returning to the same world in the same browser, Willowbrook uses the last observed historical event ID and simulation time to prepare a short, deterministic report. It includes only saved historical records, never asks an LLM to write a summary, and reports elapsed **simulation** time rather than wall-clock downtime. Population changes are omitted because current history does not reliably track them. If no events were recorded during a simulated absence, the report says so. A first visit establishes a baseline without claiming an absence.
+
+The marker is stored in that browser's local storage, so another browser or cleared site data starts a new baseline. A saved world has its own ID; switching worlds or restoring a save that no longer contains the marker resets the baseline rather than mixing histories. Old saves receive an ID on startup, which is preserved with the next world save. As with other changes, an abrupt crash before a save can lose unsaved progress. Reconnects use the same history cursor and do not repeat an already prepared report. Dismiss the report or open the full History panel to explore further.
+
+For a controlled Chromium test without affecting your real world, choose an unused path and run:
+
+```bash
+npm ci
+node scripts/welcome-back-demo.js create /tmp/willowbrook-welcome-check.json
+node scripts/welcome-back-demo.js serve /tmp/willowbrook-welcome-check.json &
+fixture_pid=$!
+```
+
+1. Open `http://127.0.0.1:3017` in Chromium. The first visit has no welcome-back report. Close the tab while the fixture server keeps running.
+2. In the same terminal, run `kill -USR1 "$fixture_pid"`. This advances time and applies one existing friendship interaction **only in the test fixture**, then saves it.
+3. Reopen the same address in the same Chromium profile. The report should show the event and elapsed simulated time. Select **Explore the town history** to investigate it, or dismiss it; refreshing should not repeat that event.
+4. Stop the fixture with `kill -TERM "$fixture_pid"`. The fixture binds only to localhost and refuses to overwrite an existing file. The signal-based trigger is only for this test; normal gameplay records qualifying events automatically.

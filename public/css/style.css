@@ -1268,3 +1268,15 @@ body {
 .history-entities { display: flex; flex-wrap: wrap; gap: 5px; margin: 5px 0; }
 .history-entities span { padding: 4px 6px; font-size: 11px; color: var(--text-secondary); }
 @media (max-width: 767px) { .history-panel { top: 8px; right: 8px; width: min(430px, calc(100vw - 16px)); max-height: calc(100% - 16px); } .history-open { margin-right: 4px; padding: 4px; } }
+
+.welcome-back[hidden] { display: none; }
+.welcome-back { position: absolute; z-index: 80; top: 18px; left: 50%; transform: translateX(-50%); width: min(470px, calc(100% - 24px)); max-height: calc(100% - 36px); overflow-y: auto; background: var(--bg-primary); border: var(--border-mid); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+.welcome-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-tertiary); border-bottom: var(--border-mid); }
+.welcome-header h2 { font: 13px 'Silkscreen', cursive; }
+#welcome-close { background: none; border: 0; color: var(--text-secondary); font-size: 24px; cursor: pointer; }
+.welcome-body { padding: 12px 16px 16px; font-size: 12px; }
+#welcome-time, #welcome-more { color: var(--text-secondary); }
+#welcome-events { list-style: none; margin: 8px 0; }
+#welcome-events li { border-bottom: var(--border-light); padding: 7px 0; display: flex; flex-direction: column; }
+#welcome-events li span { color: var(--text-muted); font-size: 11px; }
+#welcome-history, #welcome-retry { margin-top: 10px; padding: 6px 10px; border: var(--border-mid); border-radius: var(--radius-sm); background: var(--accent-primary); color: white; font: 700 12px 'Nunito', sans-serif; cursor: pointer; }
