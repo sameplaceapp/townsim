@@ -353,7 +353,7 @@ World state and the AI request counter are stored in `data/` (or the Docker volu
 
 `GET /api/history` returns recorded historical events in chronological order. Optional query parameters are `type`, `entity` (a stable character or other entity ID), `kind` (such as `character`, used with `entity`), `limit` (1–100, default 50), and `offset` (default 0). `nextOffset` supplies the next page. Events with the same in-game minute retain their recording order. History is not sent with browser state or activity updates.
 
-This milestone supplies the recording infrastructure only. Existing activity and drama entries are **not** retroactively converted, and no gameplay system records new historical events yet, so an ordinary world's history is expected to be empty. Future systems should call `engine.history.record({ id, type, description, entities, metadata })` at the actual event. Supply a stable, unique occurrence ID (for example `storyline:42:resolved`); retrying identical data returns the original record, while reusing that ID for a different event fails. The simulation clock supplies the timestamp. Entities use `{ kind, id }`, not display names. Supported types are listed in `server/history/worldHistory.js` and can be extended there.
+Existing activity and drama entries are **not** retroactively converted into history; automatic recording applies only to new qualifying transitions described below. Future systems should call `engine.history.record({ id, type, description, entities, metadata })` at the actual event. Supply a stable, unique occurrence ID (for example `storyline:42:resolved`); retrying identical data returns the original record, while reusing that ID for a different event fails. The simulation clock supplies the timestamp. Entities use `{ kind, id }`, not display names. Supported types are listed in `server/history/worldHistory.js` and can be extended there.
 
 History is part of `data/state.json` and the existing `state.json.bak`, with the same graceful shutdown and recovery behavior as world state. Older saves without history load with an empty history. The current `dev` branch does not include a browser backup/export feature; copy the entire saved world when making a backup. As with other world state, changes since the last save can be lost after an abrupt crash. The JSON snapshot grows with history and is fully read on startup and rewritten on each save; queries scan the stored records, although their responses are limited. This is suitable for a modest number of significant events, not high-volume activity logging. Monitor save size and latency as the world grows; no history is automatically deleted.
 
@@ -371,3 +371,18 @@ node scripts/history-demo.js serve /tmp/willowbrook-history-check.json
 ```
 
 Open `http://127.0.0.1:3017/api/history` on that machine, note the event ID and time, stop the server with Ctrl+C, and run the same `serve` command again. Refresh the endpoint and check that both values match. This fixture server binds to localhost and never loads or overwrites the real world. For an actual running world, visit `/api/history?limit=10` on its normal private app address. This read-only endpoint has no separate authentication, just like the other existing app APIs.
+
+### Automatic historical milestones
+
+Accepted interactions can now record an established friendship (both weighted relationship levels reach 7 after at least three interactions), significant mutual deterioration (both fall to 3 or below), or recovery after significant strain (both reach 4.5). Friendship must fall below 6.5, or strain rise above 3.5, before that milestone can be recorded again. This hysteresis state is saved with the world. Existing relationships are used as the starting baseline; they are not retroactively recorded. Only the state actually applied by the simulation is considered, including accepted rule-based and AI-assisted actions; dialogue alone is not a historical event.
+
+The start, climax, and conclusion of a rivalry or grudge storyline are recorded when those transitions occur. A conclusion means the existing storyline ended; it does not claim the characters reconciled. Ordinary chat and the temporary `/api/log` activity feed are not automatically saved as permanent history. The `/api/history` endpoint returns permanent milestones. Occupations are assigned at character creation, with no existing occupation-change mechanism to record. Older saves and the existing world snapshot backup continue to work; the browser backup/export feature is not present on this branch.
+
+To see a controlled existing interaction produce history without changing a real world, run in a development checkout:
+
+```bash
+node scripts/history-integration-demo.js /tmp/willowbrook-integration-check.json
+node scripts/history-demo.js serve /tmp/willowbrook-integration-check.json
+```
+
+The fixture path must not already exist. Open `http://127.0.0.1:3017/api/history` on that machine, note the friendship record's ID and time, stop the fixture server with Ctrl+C, and run the same `serve` command again. The record should be unchanged. The scenario uses a test world, applies the existing relationship interaction logic, and does not call an LLM.
