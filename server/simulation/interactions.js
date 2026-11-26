@@ -1,6 +1,7 @@
 class InteractionManager {
   constructor() {
     this.dramaEngine = null; // Set externally by engine.js
+    this.historyIntegration = null;
   }
 
   updateRelationship(charA, charB, action) {
@@ -9,6 +10,7 @@ class InteractionManager {
 
     const relA = charA.relationships[charB.id];
     const relB = charB.relationships[charA.id];
+    const before = this.historyIntegration ? [this.computeLevel(relA), this.computeLevel(relB)] : null;
 
     // Update interaction counts
     relA.interactionCount = (relA.interactionCount || 0) + 1;
@@ -90,6 +92,10 @@ class InteractionManager {
     // Backwards compat: compute level from multi-dimensional scores
     relA.level = this.computeLevel(relA);
     relB.level = this.computeLevel(relB);
+
+    if (this.historyIntegration) {
+      this.historyIntegration.relationshipChanged(charA, charB, action, before, [relA.level, relB.level]);
+    }
 
     // Notify drama engine of significant interactions
     if (this.dramaEngine) {

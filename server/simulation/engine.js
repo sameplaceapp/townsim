@@ -9,6 +9,7 @@ const { DramaEngine } = require('./dramaEngine');
 const { LLMBatcher } = require('../llm/batcher');
 const { StateManager } = require('../persistence/stateManager');
 const { WorldHistory } = require('../history/worldHistory');
+const { HistoricalEventIntegration } = require('../history/eventIntegration');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -45,6 +46,7 @@ class SimulationEngine {
     }
 
     this.history = new WorldHistory(this.world, savedState?.history);
+    this.historyIntegration = new HistoricalEventIntegration(this.history, savedState?.historyIntegration);
 
     // Initialize subsystems
     this.pathFinder = new PathFinder(this.world);
@@ -57,6 +59,8 @@ class SimulationEngine {
 
     // Wire drama engine into subsystems
     this.interactions.dramaEngine = this.dramaEngine;
+    this.interactions.historyIntegration = this.historyIntegration;
+    this.dramaEngine.historyIntegration = this.historyIntegration;
     this.llmBatcher.promptBuilder.dramaEngine = this.dramaEngine;
 
     // Restore drama state if saved
@@ -440,6 +444,7 @@ class SimulationEngine {
     worldData.characters = this.world.characters.map(c => ({ ...c, path: [...c.path] }));
     worldData.drama = this.dramaEngine.toJSON();
     worldData.history = this.history.toJSON();
+    worldData.historyIntegration = this.historyIntegration.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 

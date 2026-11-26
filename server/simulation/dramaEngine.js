@@ -51,6 +51,7 @@ const STORYLINE_TYPES = {
 class DramaEngine {
   constructor(world) {
     this.world = world;
+    this.historyIntegration = null;
     this.activeStorylines = [];
     this.resolvedStorylines = [];
     this.characterDrama = {};   // Per-character drama state
@@ -138,6 +139,7 @@ class DramaEngine {
     this.activeStorylines = this.activeStorylines.filter(s => {
       if (s.phase === 'aftermath' && tick - s.lastEventTick > DRAMA_RULES.cooldownAfterResolution) {
         this.resolvedStorylines.push(s);
+        if (this.historyIntegration) this.historyIntegration.storyline(s, 'concluded');
         return false;
       }
       return true;
@@ -181,6 +183,7 @@ class DramaEngine {
             this.chance(story.type === 'love_triangle' || story.type === 'forbidden_friendship' ? 'romance' : 'conflict',
               this.world.characters.find(c => c.id === story.participants[0]))) {
           story.phase = 'climax';
+          if (this.historyIntegration) this.historyIntegration.storyline(story, 'climax');
           this.lastClimaxTick = tick;
           for (const id of story.participants) this.lastMajorByCharacter[id] = this.simulationMinute();
         } else if (ageMinutes >= 1440 && tension < 0.1) {
@@ -428,6 +431,7 @@ class DramaEngine {
       resolved: false
     };
     this.activeStorylines.push(storyline);
+    if (this.historyIntegration) this.historyIntegration.storyline(storyline, 'started');
 
     // Add initial emotions to participants
     for (const charId of config.participants) {
