@@ -97,17 +97,37 @@ class WorldHistory {
     return record;
   }
 
-  query({ type, entity, kind, limit = 50, offset = 0 } = {}) {
+  query({ type, entity, kind, limit = 50, offset = 0, order = 'asc', before, fromDay, toDay } = {}) {
     if ((type !== undefined && !EVENT_TYPES.includes(type)) ||
         (entity !== undefined && (typeof entity !== 'string' || !IDENTIFIER.test(entity))) ||
         (kind !== undefined && (typeof kind !== 'string' || !KIND.test(kind) || entity === undefined)) ||
         !Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
-        !Number.isSafeInteger(offset) || offset < 0) throw new TypeError('Invalid history query');
+        !Number.isSafeInteger(offset) || offset < 0 || !['asc', 'desc'].includes(order) ||
+        (order === 'desc' && offset !== 0) || (before !== undefined &&
+          (order !== 'desc' || !Number.isSafeInteger(before) || before < 0 || before > this.#events.length)) ||
+        (fromDay !== undefined && (!Number.isSafeInteger(fromDay) || fromDay < 1)) ||
+        (toDay !== undefined && (!Number.isSafeInteger(toDay) || toDay < 1)) ||
+        (fromDay !== undefined && toDay !== undefined && fromDay > toDay)) throw new TypeError('Invalid history query');
+    const matches = event => (!type || event.type === type) &&
+      (!entity || event.entities.some(e => e.id === entity && (!kind || e.kind === kind))) &&
+      (fromDay === undefined || event.time.day >= fromDay) && (toDay === undefined || event.time.day <= toDay);
+    if (order === 'desc') {
+      const events = [];
+      let nextBefore = null;
+      for (let i = (before ?? this.#events.length) - 1; i >= 0; i--) {
+        const event = this.#events[i];
+        if (fromDay !== undefined && event.time.day < fromDay) break;
+        if (!matches(event)) continue;
+        if (events.length === limit) return { events, nextBefore };
+        events.push(event);
+        nextBefore = i;
+      }
+      return { events, nextBefore: null };
+    }
     const results = [];
     let matched = 0;
     for (const event of this.#events) {
-      if (type && event.type !== type) continue;
-      if (entity && !event.entities.some(e => e.id === entity && (!kind || e.kind === kind))) continue;
+      if (!matches(event)) continue;
       if (matched++ < offset) continue;
       results.push(event);
       if (results.length === limit + 1) break;

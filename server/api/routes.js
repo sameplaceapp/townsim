@@ -25,13 +25,16 @@ router.get('/log', (req, res) => {
 });
 
 router.get('/history', (req, res) => {
-  const { type, entity, kind, limit = '50', offset = '0' } = req.query;
+  const { type, entity, kind, limit = '50', offset = '0', order, before, fromDay, toDay } = req.query;
   if (typeof limit !== 'string' || !/^\d+$/.test(limit) ||
-      typeof offset !== 'string' || !/^\d+$/.test(offset)) {
+      typeof offset !== 'string' || !/^\d+$/.test(offset) ||
+      [before, fromDay, toDay].some(v => v !== undefined && (typeof v !== 'string' || !/^\d+$/.test(v)))) {
     return res.status(400).json({ error: 'Invalid history query' });
   }
   try {
-    res.json(req.app.get('engine').history.query({ type, entity, kind, limit: Number(limit), offset: Number(offset) }));
+    res.json(req.app.get('engine').history.query({ type, entity, kind, limit: Number(limit), offset: Number(offset),
+      order, before: before === undefined ? undefined : Number(before),
+      fromDay: fromDay === undefined ? undefined : Number(fromDay), toDay: toDay === undefined ? undefined : Number(toDay) }));
   } catch (err) {
     if (err instanceof TypeError) return res.status(400).json({ error: 'Invalid history query' });
     throw err;

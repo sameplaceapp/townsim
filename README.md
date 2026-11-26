@@ -386,3 +386,19 @@ node scripts/history-demo.js serve /tmp/willowbrook-integration-check.json
 ```
 
 The fixture path must not already exist. Open `http://127.0.0.1:3017/api/history` on that machine, note the friendship record's ID and time, stop the fixture server with Ctrl+C, and run the same `serve` command again. The record should be unchanged. The scenario uses a test world, applies the existing relationship interaction logic, and does not call an LLM.
+
+### Browsing the History timeline
+
+Open **History** in the top bar for the newest permanent events. Apply category, resident ID or name, and optional day filters; **Load older events** keeps those filters, and **Refresh** checks for newer records. Select an event for its details, then select an active resident to open their profile and center the map. Historical residents who are no longer active remain visible by ID. Activity in `/api/log` is temporary and separate from the permanent archive.
+
+To test in Chromium without changing your real world, use a new absolute fixture path:
+
+```bash
+npm ci
+node scripts/history-timeline-demo.js create /tmp/willowbrook-timeline-check.json
+node scripts/history-timeline-demo.js serve /tmp/willowbrook-timeline-check.json
+```
+
+Open `http://127.0.0.1:3017`, select **History**, apply the Conflict category and resident `alice`, and use **Load older events**. Clear filters, select an entry, inspect its details, and select an active resident to locate them. Entries involving `former_resident` demonstrate an unavailable historical reference. Stop the fixture server with Ctrl+C and run the same `serve` command again; the records should remain. The fixture has 80 representative test events, binds only to localhost, and refuses to overwrite an existing file. A production world may have no events until significant developments occur.
+
+For reverse chronological API pages use `order=desc&limit=25`, then send `before=<nextBefore>` from each response. A cursor preserves your place if new records arrive; refresh from the first page to see them. `fromDay` and `toDay` filter by inclusive simulation day on the server. The existing ascending `offset` API remains available. Filtering scans history on the server, so very large archives may increase query time; records are not copied into regular simulation updates.

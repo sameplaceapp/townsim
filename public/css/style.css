@@ -1236,3 +1236,35 @@ body {
     width: 260px;
   }
 }
+
+/* The chronicle sits above the map and can be dismissed at any time. */
+.history-open { margin-right: 10px; padding: 5px 9px; border: var(--border-mid); border-radius: var(--radius-sm); background: var(--bg-secondary); color: var(--text-primary); font: 700 12px 'Nunito', sans-serif; cursor: pointer; white-space: nowrap; }
+.history-open:hover { background: var(--bg-hover); }
+.history-panel[hidden], .history-detail[hidden], #history-more[hidden] { display: none; }
+.history-panel { position: absolute; z-index: 70; right: 14px; top: 14px; width: min(430px, calc(100vw - 28px)); max-height: calc(100% - 28px); display: flex; flex-direction: column; overflow: hidden; background: var(--bg-primary); border: var(--border-mid); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+.history-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: var(--bg-tertiary); border-bottom: var(--border-mid); }
+.history-header h2 { font-family: 'Silkscreen', cursive; font-size: 13px; font-weight: normal; }
+.history-kicker { font-size: 9px; font-weight: 800; letter-spacing: 1.4px; color: var(--text-secondary); }
+#history-close { border: 0; background: transparent; font-size: 24px; line-height: 1; cursor: pointer; color: var(--text-secondary); }
+.history-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 9px; padding: 10px 14px; border-bottom: var(--border-light); }
+.history-filters label { display: flex; flex-direction: column; gap: 2px; font-size: 10px; font-weight: 800; color: var(--text-secondary); }
+.history-filters input, .history-filters select { width: 100%; min-width: 0; border: var(--border-mid); border-radius: var(--radius-sm); background: white; padding: 5px 6px; color: var(--text-primary); font: 12px 'Nunito', sans-serif; }
+.history-filter-actions { grid-column: 1 / -1; display: flex; gap: 7px; }
+.history-filter-actions button, .history-footer button, .history-entities button { padding: 4px 9px; border: var(--border-mid); border-radius: var(--radius-sm); background: var(--bg-secondary); color: var(--text-primary); font: 700 11px 'Nunito', sans-serif; cursor: pointer; }
+.history-filter-actions button:first-child { background: var(--accent-primary); color: white; }
+.history-status { padding: 6px 14px; color: var(--text-muted); font-size: 11px; }
+.history-list { overflow-y: auto; min-height: 35px; padding: 0 12px; flex: 1; }
+.history-entry { width: 100%; display: flex; gap: 10px; text-align: left; padding: 9px 4px; border: 0; border-bottom: var(--border-light); background: transparent; font: inherit; color: inherit; cursor: pointer; }
+.history-entry:hover, .history-entry:focus-visible { background: var(--bg-hover); }
+.history-marker { color: var(--accent-success); font-size: 13px; }
+.history-conflict .history-marker { color: var(--accent-danger); }
+.history-entry-content { display: flex; flex-direction: column; min-width: 0; }
+.history-entry-content strong { font-size: 13px; overflow-wrap: anywhere; }
+.history-entry-time { color: var(--text-secondary); font-size: 10px; font-weight: 700; }
+.history-entry-names, .history-context { color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; }
+.history-footer { padding: 5px 14px; }
+.history-detail { overflow-y: auto; max-height: 32%; padding: 10px 14px; background: var(--bg-secondary); border-top: var(--border-mid); font-size: 12px; }
+.history-detail h3 { font-size: 13px; }
+.history-entities { display: flex; flex-wrap: wrap; gap: 5px; margin: 5px 0; }
+.history-entities span { padding: 4px 6px; font-size: 11px; color: var(--text-secondary); }
+@media (max-width: 767px) { .history-panel { top: 8px; right: 8px; width: min(430px, calc(100vw - 16px)); max-height: calc(100% - 16px); } .history-open { margin-right: 4px; padding: 4px; } }
