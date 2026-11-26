@@ -13,6 +13,7 @@
   let displayedMinute = '';
   let followTargetId = null;
   let previousActivities = {};
+  let reconnectPending = false;
 
   // ?hour=21.5 overrides the visual time of day (for previewing lighting)
   const debugHourParam = new URLSearchParams(location.search).get('hour');
@@ -27,6 +28,7 @@
   const renderer = new Renderer(bgCanvas, fgCanvas, camera, TILE_SIZE);
   const interpolator = new Interpolator();
   const ui = new UI();
+  const welcome = new WelcomeBack(() => history.open());
   const history = new HistoryPanel(id => {
     document.getElementById('character-tray').classList.remove('collapsed');
     document.getElementById('character-tray').classList.add('active-mobile');
@@ -170,6 +172,7 @@
           renderer.setWorldData(data.grid, data.buildings);
           ui.setBuildings(data.buildings);
           history.setBuildings(data.buildings);
+          if (reconnectPending) { reconnectPending = false; welcome.prepare(true); }
         }
 
         // Update character positions
@@ -204,12 +207,16 @@
         if (data.log || data.activityLog) ui.updateLog(data.log || data.activityLog);
         if (data.drama) ui.updateDrama(data.drama, characters);
         history.setCharacters(characters);
+        welcome.setCharacters(characters);
+        welcome.observe(data.visitMarker);
         ui.updateCharacterList(characters);
         ui.updateCharacterPanel(characters, currentTick);
       }
     };
 
     ws.onclose = () => {
+      welcome.suspend();
+      reconnectPending = true;
       clockTiming = { ...clockTiming, paused: true };
       interpolator.onTick(characters, clockTiming);
       setActiveButton(null);
@@ -243,6 +250,8 @@
       // Load characters
       characters = worldState.characters || [];
       history.setCharacters(characters);
+      welcome.setCharacters(characters);
+      welcome.prepare();
       currentTick = worldState.tick || 0;
       phase = worldState.phase || 'morning';
       if (worldState.time) clock = { ...worldState.time };

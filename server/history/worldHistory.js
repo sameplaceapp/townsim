@@ -138,6 +138,36 @@ class WorldHistory {
   }
 
   toJSON() { return { version: 1, events: this.#events.slice() }; }
+
+  lastId() { return this.#events.at(-1)?.id ?? null; }
+  count() { return this.#events.length; }
+
+  // Summarize in one pass, retaining only a small selection of actual records.
+  since(id) {
+    const position = id === null ? -1 : this.#events.findIndex(event => event.id === id);
+    if (id !== null && position === -1) return null;
+    const selection = [];
+    let count = 0;
+    for (let i = position + 1; i < this.#events.length; i++) {
+      const event = this.#events[i];
+      count++;
+      const group = event.metadata.storylineId ? `story:${event.metadata.storylineId}` :
+        `${event.type}:${event.metadata.milestone || ''}:${event.entities.map(e => `${e.kind}:${e.id}`).sort().join('|')}`;
+      const score = (event.type === 'community_event' ? 8 : event.type === 'conflict' ? 6 : 4) +
+        (event.metadata.stage === 'concluded' || event.metadata.milestone === 'reconciliation' ? 3 : 0) +
+        Math.min(2, event.entities.filter(e => e.kind === 'character').length);
+      const candidate = { event, group, score, index:i };
+      const existing = selection.findIndex(item => item.group === group);
+      if (existing !== -1) {
+        if (selection[existing].score > score) continue;
+        selection.splice(existing, 1);
+      }
+      selection.push(candidate);
+      selection.sort((a,b) => b.score - a.score || b.index - a.index);
+      if (selection.length > 5) selection.pop();
+    }
+    return { count, events: selection.map(item => item.event) };
+  }
 }
 
 module.exports = { WorldHistory, EVENT_TYPES };

@@ -24,6 +24,25 @@ router.get('/log', (req, res) => {
   res.json(engine.world.activityLog);
 });
 
+router.post('/welcome-back', (req, res) => {
+  const engine = req.app.get('engine');
+  engine.sync();
+  const current = engine.getVisitMarker();
+  const previous = req.body?.previous;
+  if (previous == null || previous.worldId !== current.worldId) return res.json({ mode:'first', marker:current });
+  const t = previous.time;
+  if (!t || !Number.isSafeInteger(t.day) || t.day < 1 || !Number.isInteger(t.hour) || t.hour < 0 || t.hour > 23 ||
+      !Number.isInteger(t.minute) || t.minute < 0 || t.minute > 59 ||
+      !(previous.lastEventId === null || (typeof previous.lastEventId === 'string' && previous.lastEventId.length <= 128))) {
+    return res.status(400).json({ error:'Invalid visit marker' });
+  }
+  const minutes = time => ((time.day - 1) * 24 + time.hour) * 60 + time.minute;
+  const elapsed = minutes(current.time) - minutes(t);
+  const history = engine.history.since(previous.lastEventId);
+  if (elapsed < 0 || history === null) return res.json({ mode:'first', marker:current });
+  res.json({ mode:'return', marker:current, elapsedMinutes:elapsed, count:history.count, events:history.events });
+});
+
 router.get('/history', (req, res) => {
   const { type, entity, kind, limit = '50', offset = '0', order, before, fromDay, toDay } = req.query;
   if (typeof limit !== 'string' || !/^\d+$/.test(limit) ||
