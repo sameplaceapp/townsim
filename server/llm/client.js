@@ -1,9 +1,20 @@
+const fs = require('fs');
+
 class LLMClient {
   constructor(config, budget) {
     this.budget = budget;
     this.baseUrl = process.env.LLM_BASE_URL || 'http://localhost:11434/v1';
     this.model = process.env.LLM_MODEL || 'llama3';
-    this.apiKey = process.env.LLM_API_KEY || '';
+    if (process.env.LLM_API_KEY_FILE !== undefined) {
+      try {
+        this.apiKey = fs.readFileSync(process.env.LLM_API_KEY_FILE, 'utf8').trim();
+      } catch (err) {
+        const code = typeof err.code === 'string' && /^[A-Z0-9_]+$/.test(err.code) ? ` (${err.code})` : '';
+        throw new Error(`Unable to read configured LLM_API_KEY_FILE${code}`);
+      }
+    } else {
+      this.apiKey = process.env.LLM_API_KEY || '';
+    }
     this.maxTokens = config.llm.maxTokens;
     this.temperature = config.llm.temperature;
     this.timeout = config.llm.timeout;
@@ -65,7 +76,9 @@ class LLMClient {
         if (err.name === 'AbortError') {
           console.warn(`LLM timeout (attempt ${attempt + 1}/${this.maxRetries})`);
         } else {
-          console.warn(`LLM error (attempt ${attempt + 1}/${this.maxRetries}):`, err.message);
+          const message = String(err.message || err);
+          console.warn(`LLM error (attempt ${attempt + 1}/${this.maxRetries}):`,
+            this.apiKey ? message.split(this.apiKey).join('[REDACTED]') : message);
         }
         if (attempt < this.maxRetries - 1) {
           await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));

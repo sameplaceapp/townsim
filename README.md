@@ -76,6 +76,7 @@ docker compose up --build
 | `LLM_BASE_URL` | OpenAI-compatible API endpoint | `https://openrouter.ai/api/v1` |
 | `LLM_MODEL` | Model identifier | `nvidia/nemotron-3-nano-30b-a3b:free` |
 | `LLM_API_KEY` | API key (leave empty for local models) | `sk-...` |
+| `LLM_API_KEY_FILE` | File containing an API key; takes precedence over `LLM_API_KEY` | `/run/secrets/openrouter_api_key` |
 | `LLM_DAILY_LIMIT` | Maximum outgoing AI attempts per UTC day, including retries; 0 disables AI | `0` |
 | `PORT` | Server port | `3000` |
 | `NODE_ENV` | Environment | `production` |
@@ -264,9 +265,10 @@ The Pi only needs Docker, Docker Compose, the deployment Compose file, and optio
    WILLOWBROOK_IMAGE=ghcr.io/sameplaceapp/townsim:latest
    WILLOWBROOK_BIND_ADDRESS=<private-ip-of-pi>
    WILLOWBROOK_VOLUME_NAME=<existing-volume-name>
+   OPENROUTER_SECRET_FILE=/home/<pi-user>/.config/willowbrook/openrouter_api_key
    ```
 
-   Replace the example image with your own lowercase GHCR owner and repository if using another fork. Replace the other placeholders with real values, or omit those lines. To discover the Pi's addresses, run `hostname -I` and select its private LAN address. This is deployment configuration, not a hard-coded address in the app. Keep the app on a trusted LAN; do not bind it to a public interface or add public router forwarding. The app has no login. Optional LLM settings (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_DAILY_LIMIT`) can be set in `.env`; the default works without an LLM.
+   Replace the example image with your own lowercase GHCR owner and repository if using another fork. Replace the other placeholders with real values, or omit the optional bind address and volume lines. `OPENROUTER_SECRET_FILE` is required and must be an absolute path outside the repository; create the file as described below before starting Compose. To discover the Pi's addresses, run `hostname -I` and select its private LAN address. This is deployment configuration, not a hard-coded address in the app. Keep the app on a trusted LAN; do not bind it to a public interface or add public router forwarding. The app has no login.
 5. **If you already have a world**, find the actual volume mounted at `/app/data` before starting the new Compose setup. For example, identify the existing container with `docker ps -a`, then run:
 
    ```bash
@@ -274,7 +276,7 @@ The Pi only needs Docker, Docker Compose, the deployment Compose file, and optio
    ```
 
    Set `WILLOWBROOK_VOLUME_NAME` to the volume name shown beside `/app/data` in `.env`. A new directory or Compose project can otherwise select a different volume and appear to start a fresh world. Back up the existing volume first. Never remove or overwrite it to test a migration.
-6. Pull the finished image and start it:
+6. Create the protected secret file and configure OpenRouter as described below, then pull the finished image and start it:
 
    ```bash
    docker compose -f docker-compose.ghcr.yml pull
@@ -282,6 +284,43 @@ The Pi only needs Docker, Docker Compose, the deployment Compose file, and optio
    ```
 
    Open the Pi's configured address on port 3000, and check `docker compose -f docker-compose.ghcr.yml logs --tail=50` if needed. Compose restarts the container unless it was explicitly stopped. The named volume holds `/app/data/state.json`, its backup, and the AI request counter across container replacement.
+
+### OpenRouter secret on the Pi
+
+Keep the key on the Pi, outside the repository and image. On the Pi, create a private directory and enter the key at the hidden prompt (this replaces that secret file if it already exists):
+
+```bash
+install -d -m 700 "$HOME/.config/willowbrook"
+read -r -s -p 'OpenRouter API key: ' willowbrook_key; printf '\n'
+(umask 077; printf '%s\n' "$willowbrook_key" > "$HOME/.config/willowbrook/openrouter_api_key")
+unset willowbrook_key
+chmod 600 "$HOME/.config/willowbrook/openrouter_api_key"
+```
+
+Set `OPENROUTER_SECRET_FILE` in the deployment `.env` to the **absolute** path printed by `printf '%s\n' "$HOME/.config/willowbrook/openrouter_api_key"`. Add these non-secret settings, choosing an available OpenRouter model and your desired limit:
+
+```dotenv
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_MODEL=nvidia/nemotron-3-nano-30b-a3b:free
+LLM_DAILY_LIMIT=20
+```
+
+`LLM_DAILY_LIMIT=0` disables AI requests; a positive limit is required. The limit counts attempts, including retries, per UTC day. OpenRouter usage may incur charges depending on the model and account. The GHCR Compose file mounts the secret at `/run/secrets/openrouter_api_key`; it does not pass the key value in an environment variable. Compose file-backed secrets use host file permissions, so the container process must be able to read the file. A missing or unreadable configured secret causes startup to fail clearly. Restart the container to load a changed key.
+
+To run without any AI provider, create the required secret file empty (only if it does not already exist) and keep `LLM_DAILY_LIMIT=0` and `LLM_BASE_URL` unset:
+
+```bash
+install -d -m 700 "$HOME/.config/willowbrook"
+if [ ! -e "$HOME/.config/willowbrook/openrouter_api_key" ]; then
+  (umask 077; : > "$HOME/.config/willowbrook/openrouter_api_key")
+fi
+```
+
+Set `OPENROUTER_SECRET_FILE` to its absolute path in `.env` as above. An empty key file is supported for this rule-based mode.
+
+After the change is released on `main` and its GHCR build succeeds, replace the Pi's deployment Compose file with the new version, then run the pull and `up -d --no-build` commands above from the deployment directory. This recreates the container while keeping the configured world-data volume. If GHCR is private, authenticate as described above before pulling.
+
+To check connectivity, open `http://<pi-address>:3000/api/stats` from a device that can reach the app. With a configured provider and positive limit, `aiBudget.enabled` is true; `aiBudget.used` counts attempts and `llmCalls` counts successful responses since startup. The game only requests AI for eligible encounters, so a successful response may take time. If attempts increase but `llmCalls` remains zero, check the container logs for provider errors and `aiBudget.fallbackReason` for cooldown or budget exhaustion. Do not paste your key into logs or support requests.
 
 ### Update and rollback
 
@@ -308,4 +347,4 @@ MIT
 
 ### World saves and AI budget
 
-World state and the AI request counter are stored in `data/` (or the Docker volume). Snapshots are written atomically with a previous backup; if both are unreadable, startup stops rather than replacing the world. Back up this data before upgrading. AI calls run in the background, use a UTC daily attempt limit, and are disabled by default. Set `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` if required, and `LLM_DAILY_LIMIT` in `.env` to enable them. The simulation uses rule-based decisions immediately; recent AI results are reused only if the situation matches. After a provider failure, requests pause for one minute. Usage and fallback status are visible in `/api/stats`.
+World state and the AI request counter are stored in `data/` (or the Docker volume). Snapshots are written atomically with a previous backup; if both are unreadable, startup stops rather than replacing the world. Back up this data before upgrading. AI calls run in the background, use a UTC daily attempt limit, and are disabled by default. Configure `LLM_BASE_URL`, `LLM_MODEL`, a key if required, and a positive `LLM_DAILY_LIMIT` to enable them. For GHCR deployments, use the secret file instructions above; for local development, `LLM_API_KEY` is supported when `LLM_API_KEY_FILE` is unset. The simulation uses rule-based decisions immediately; recent AI results are reused only if the situation matches. After a provider failure, requests pause for one minute. Usage and fallback status are visible in `/api/stats`.
