@@ -9,6 +9,7 @@ services:
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY_FILE: /run/secrets/openrouter_api_key
       LLM_DAILY_LIMIT: ${LLM_DAILY_LIMIT:-0}
+      CALENDAR_DAYS_PER_YEAR: ${CALENDAR_DAYS_PER_YEAR:-}
     secrets:
       - openrouter_api_key
     volumes:

@@ -204,6 +204,7 @@
         }
 
         // Update UI
+        ui.setCalendar(data.calendar);
         ui.updateTime(timeString, data.phase);
         ui.updateSimulationStatus(data.timing, characters.length);
         if (data.log || data.activityLog) ui.updateLog(data.log || data.activityLog);
@@ -267,6 +268,7 @@
       }
 
       // Update UI
+      ui.setCalendar(worldState.calendar);
       ui.updateTime(
         worldState.tick
           ? `Day ${worldState.time.day} ${String(worldState.time.hour).padStart(2,'0')}:${String(worldState.time.minute).padStart(2,'0')}`

@@ -438,3 +438,21 @@ node scripts/town-statistics-demo.js serve /tmp/willowbrook-statistics-check.jso
 ```
 
 Open `http://127.0.0.1:3017` in Chromium and select **Stats**. Compare the population with the top-bar resident count and the totals from `/api/town-statistics`; check the category counts, the unchanged-population dots and the older/newer pages. Day 31 is intentionally missing in the fixture. Stop the fixture server with Ctrl+C and start it again with the same `serve` command to check the observations persist. The fixture binds only to localhost, uses no AI, and refuses to overwrite existing files. Its population changes are controlled test data, not new gameplay mechanics.
+
+### Generational calendar
+
+The calendar uses the same absolute simulation day as the existing clock: by default Days 1–12 are Year 1, Days 13–24 are Year 2, and so on. A simulation day still has 24 hours, and at 1× one in-game minute still takes five real seconds. The status bar shows the year alongside the existing absolute day and time. `/api/state` and `/api/stats` also expose `calendar` with `year`, `dayOfYear`, and `daysPerYear`.
+
+For a **new** world, set `CALENDAR_DAYS_PER_YEAR` to a positive integer in the deployment `.env` before starting the container (or in the environment for a Node.js run). If unset, the default is `calendar.daysPerYear` in `config/default.json`, currently 12. The selected length is saved in `data/state.json` under `calendar` and included in the existing previous-save `.bak`. Later configuration changes do not alter that world's calendar. A legacy save with no calendar adopts the then-configured length when first opened; that choice is fixed once the world is saved. As with other unsaved changes, a crash before the next save can lose that migration. There is no separate browser backup/export feature on this branch; back up the world data volume.
+
+Future systems can subscribe to `engine.calendar.on('day', listener)` and `engine.calendar.on('year', listener)` and register `engine.calendar.onAnniversary(dayOfYear, listener)`, which returns an unsubscribe function. Notifications are generated at real simulation day boundaries, never simply by loading a save. Anniversary registrations are runtime subscriptions: a future feature must restore its own subscriptions on startup and save any effects with the world. No birthdays or aging are implemented here.
+
+To check a year boundary quickly without modifying a real world:
+
+```bash
+npm ci
+node scripts/calendar-demo.js create /tmp/willowbrook-calendar-check.json
+node scripts/calendar-demo.js serve /tmp/willowbrook-calendar-check.json
+```
+
+Open `http://127.0.0.1:3017` in Chromium. The isolated fixture begins paused at Year 1, Day 12, 23:59. Select 5× to see Year 2, Day 13 after about one real second; pause to inspect it. `/api/state` shows the same server calendar. Stop the fixture with Ctrl+C and run the same `serve` command again to verify the calendar survives restart. Choose a different absolute path if the fixture exists. It binds only to localhost and never overwrites a real save.

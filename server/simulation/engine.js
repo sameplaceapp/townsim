@@ -12,6 +12,7 @@ const { WorldHistory } = require('../history/worldHistory');
 const { HistoricalEventIntegration } = require('../history/eventIntegration');
 const { randomUUID } = require('node:crypto');
 const { TownStatistics } = require('../statistics/townStatistics');
+const { Calendar } = require('./calendar');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -48,6 +49,7 @@ class SimulationEngine {
       console.log(`Restored state at tick ${this.world.tick}`);
     }
 
+    this.calendar = new Calendar(this.world, config.calendar, savedState?.calendar);
     this.townStatistics = new TownStatistics(savedState?.townStatistics);
     this.history = new WorldHistory(this.world, savedState?.history);
     this.historyIntegration = new HistoricalEventIntegration(this.history, savedState?.historyIntegration);
@@ -106,6 +108,7 @@ class SimulationEngine {
         this.world.advanceClock(1);
         if (this.world.time.day !== completedDay) {
           this.townStatistics.observe(completedDay, this.world.characters.length);
+          this.calendar.dayStarted(this.world.time.day);
         }
       }
       if (this.movementProgress >= movementInterval - 0.000001) {
@@ -387,6 +390,7 @@ class SimulationEngine {
       tick: this.world.tick,
       time: { ...this.world.time },
       visitMarker: this.getVisitMarker(),
+      calendar: this.calendar?.current(),
       phase: this.world.phase,
       timeString: this.world.getTimeString(),
       characters: this.world.characters.map(c => c.toSummary()),
@@ -422,7 +426,7 @@ class SimulationEngine {
 
   getState() {
     this.sync();
-    return { ...this.world.toJSON(), timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker() };
+    return { ...this.world.toJSON(), timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker(), calendar: this.calendar?.current() };
   }
 
   getVisitMarker() { return { worldId: this.worldId, lastEventId: this.history?.lastId() ?? null,
@@ -438,6 +442,7 @@ class SimulationEngine {
       speed: this.speed,
       tick: this.world.tick,
       time: this.world.getTimeString(),
+      calendar: this.calendar.current(),
       drama: {
         townMood: this.dramaEngine.townMood,
         activeStorylines: this.dramaEngine.activeStorylines.length,
@@ -451,6 +456,7 @@ class SimulationEngine {
     const worldData = this.world.toJSON();
     worldData.version = 1;
     worldData.worldId = this.worldId;
+    worldData.calendar = this.calendar.toJSON();
     worldData.activityLog = this.world.activityLog;
     worldData.lastScheduleHour = this.lastScheduleHour;
     worldData.timingProgress = { minute: this.minuteProgress, logic: this.logicProgress, movement: this.movementProgress };
