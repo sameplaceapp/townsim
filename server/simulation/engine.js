@@ -8,9 +8,10 @@ const { InteractionManager } = require('./interactions');
 const { DramaEngine } = require('./dramaEngine');
 const { LLMBatcher } = require('../llm/batcher');
 const { StateManager } = require('../persistence/stateManager');
+const { WorldHistory } = require('../history/worldHistory');
 
 class SimulationEngine {
-  constructor(config, wss, now = () => performance.now()) {
+  constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
     this.now = now;
     this.config = config;
     this.wss = wss;
@@ -34,7 +35,7 @@ class SimulationEngine {
     };
 
     // Initialize world
-    this.stateManager = new StateManager();
+    this.stateManager = stateManager;
     const savedState = this.stateManager.load();
     this.world = new World(config);
 
@@ -42,6 +43,8 @@ class SimulationEngine {
       this.restoreState(savedState);
       console.log(`Restored state at tick ${this.world.tick}`);
     }
+
+    this.history = new WorldHistory(this.world, savedState?.history);
 
     // Initialize subsystems
     this.pathFinder = new PathFinder(this.world);
@@ -436,6 +439,7 @@ class SimulationEngine {
     worldData.timingProgress = { minute: this.minuteProgress, logic: this.logicProgress, movement: this.movementProgress };
     worldData.characters = this.world.characters.map(c => ({ ...c, path: [...c.path] }));
     worldData.drama = this.dramaEngine.toJSON();
+    worldData.history = this.history.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 

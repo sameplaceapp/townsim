@@ -348,3 +348,26 @@ MIT
 ### World saves and AI budget
 
 World state and the AI request counter are stored in `data/` (or the Docker volume). Snapshots are written atomically with a previous backup; if both are unreadable, startup stops rather than replacing the world. Back up this data before upgrading. AI calls run in the background, use a UTC daily attempt limit, and are disabled by default. Configure `LLM_BASE_URL`, `LLM_MODEL`, a key if required, and a positive `LLM_DAILY_LIMIT` to enable them. For GHCR deployments, use the secret file instructions above; for local development, `LLM_API_KEY` is supported when `LLM_API_KEY_FILE` is unset. The simulation uses rule-based decisions immediately; recent AI results are reused only if the situation matches. After a provider failure, requests pause for one minute. Usage and fallback status are visible in `/api/stats`.
+
+### World history foundation
+
+`GET /api/history` returns recorded historical events in chronological order. Optional query parameters are `type`, `entity` (a stable character or other entity ID), `kind` (such as `character`, used with `entity`), `limit` (1–100, default 50), and `offset` (default 0). `nextOffset` supplies the next page. Events with the same in-game minute retain their recording order. History is not sent with browser state or activity updates.
+
+This milestone supplies the recording infrastructure only. Existing activity and drama entries are **not** retroactively converted, and no gameplay system records new historical events yet, so an ordinary world's history is expected to be empty. Future systems should call `engine.history.record({ id, type, description, entities, metadata })` at the actual event. Supply a stable, unique occurrence ID (for example `storyline:42:resolved`); retrying identical data returns the original record, while reusing that ID for a different event fails. The simulation clock supplies the timestamp. Entities use `{ kind, id }`, not display names. Supported types are listed in `server/history/worldHistory.js` and can be extended there.
+
+History is part of `data/state.json` and the existing `state.json.bak`, with the same graceful shutdown and recovery behavior as world state. Older saves without history load with an empty history. The current `dev` branch does not include a browser backup/export feature; copy the entire saved world when making a backup. As with other world state, changes since the last save can be lost after an abrupt crash. The JSON snapshot grows with history and is fully read on startup and rewritten on each save; queries scan the stored records, although their responses are limited. This is suitable for a modest number of significant events, not high-volume activity logging. Monitor save size and latency as the world grows; no history is automatically deleted.
+
+To verify without modifying a real world, use an isolated fixture in two separate application processes:
+
+```bash
+node scripts/history-demo.js create /tmp/willowbrook-history-check.json
+node scripts/history-demo.js inspect /tmp/willowbrook-history-check.json
+```
+
+The output should show the same `demo:community:1` ID and simulation time in both runs. Choose a new absolute path if the fixture already exists; the command refuses to overwrite one. To verify through an isolated headless server, run:
+
+```bash
+node scripts/history-demo.js serve /tmp/willowbrook-history-check.json
+```
+
+Open `http://127.0.0.1:3017/api/history` on that machine, note the event ID and time, stop the server with Ctrl+C, and run the same `serve` command again. Refresh the endpoint and check that both values match. This fixture server binds to localhost and never loads or overwrites the real world. For an actual running world, visit `/api/history?limit=10` on its normal private app address. This read-only endpoint has no separate authentication, just like the other existing app APIs.
