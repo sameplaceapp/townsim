@@ -385,6 +385,7 @@ class UI {
         <div class="char-detail-info">
           <div class="char-detail-name">${this.escapeHtml(char.name)}</div>
           <div class="char-detail-job">${this.escapeHtml(char.job)}</div>
+          ${Number.isSafeInteger(char.age) && Number.isSafeInteger(char.birthday) ? `<div class="char-detail-job">Age ${char.age} · Birthday: day ${char.birthday} of the year</div>` : ''}
           ${traitsHtml}
         </div>
       </div>

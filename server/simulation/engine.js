@@ -13,6 +13,7 @@ const { HistoricalEventIntegration } = require('../history/eventIntegration');
 const { randomUUID } = require('node:crypto');
 const { TownStatistics } = require('../statistics/townStatistics');
 const { Calendar } = require('./calendar');
+const { migrateBirthDates, recordBirthdayMilestones } = require('./aging');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -50,9 +51,11 @@ class SimulationEngine {
     }
 
     this.calendar = new Calendar(this.world, config.calendar, savedState?.calendar);
+    migrateBirthDates(this.world.characters, this.calendar);
     this.townStatistics = new TownStatistics(savedState?.townStatistics);
     this.history = new WorldHistory(this.world, savedState?.history);
     this.historyIntegration = new HistoricalEventIntegration(this.history, savedState?.historyIntegration);
+    this.calendar.on('day', date => recordBirthdayMilestones(this.world.characters, this.historyIntegration, date));
 
     // Initialize subsystems
     this.pathFinder = new PathFinder(this.world);
@@ -393,7 +396,7 @@ class SimulationEngine {
       calendar: this.calendar?.current(),
       phase: this.world.phase,
       timeString: this.world.getTimeString(),
-      characters: this.world.characters.map(c => c.toSummary()),
+      characters: this.world.characters.map(c => c.toSummary(this.calendar)),
       log: this.world.activityLog.slice(-100),
       drama: this.getDramaDisplayState()
     };
@@ -426,7 +429,7 @@ class SimulationEngine {
 
   getState() {
     this.sync();
-    return { ...this.world.toJSON(), timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker(), calendar: this.calendar?.current() };
+    return { ...this.world.toJSON(this.calendar), timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker(), calendar: this.calendar?.current() };
   }
 
   getVisitMarker() { return { worldId: this.worldId, lastEventId: this.history?.lastId() ?? null,
