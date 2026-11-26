@@ -24,6 +24,20 @@ router.get('/log', (req, res) => {
   res.json(engine.world.activityLog);
 });
 
+router.get('/history', (req, res) => {
+  const { type, entity, kind, limit = '50', offset = '0' } = req.query;
+  if (typeof limit !== 'string' || !/^\d+$/.test(limit) ||
+      typeof offset !== 'string' || !/^\d+$/.test(offset)) {
+    return res.status(400).json({ error: 'Invalid history query' });
+  }
+  try {
+    res.json(req.app.get('engine').history.query({ type, entity, kind, limit: Number(limit), offset: Number(offset) }));
+  } catch (err) {
+    if (err instanceof TypeError) return res.status(400).json({ error: 'Invalid history query' });
+    throw err;
+  }
+});
+
 router.get('/config', (req, res) => {
   const engine = req.app.get('engine');
   const cfg = { ...engine.config };
