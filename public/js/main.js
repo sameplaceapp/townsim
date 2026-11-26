@@ -27,6 +27,11 @@
   const renderer = new Renderer(bgCanvas, fgCanvas, camera, TILE_SIZE);
   const interpolator = new Interpolator();
   const ui = new UI();
+  const history = new HistoryPanel(id => {
+    document.getElementById('character-tray').classList.remove('collapsed');
+    document.getElementById('character-tray').classList.add('active-mobile');
+    ui.onDirectorySelect(id);
+  });
 
   function parseClock(timeString) {
     const m = /Day\s+(\d+)\s+(\d+):(\d+)/.exec(timeString || '');
@@ -164,6 +169,7 @@
           camera.setWorldSize(data.gridWidth, data.gridHeight);
           renderer.setWorldData(data.grid, data.buildings);
           ui.setBuildings(data.buildings);
+          history.setBuildings(data.buildings);
         }
 
         // Update character positions
@@ -197,6 +203,7 @@
         ui.updateSimulationStatus(data.timing, characters.length);
         if (data.log || data.activityLog) ui.updateLog(data.log || data.activityLog);
         if (data.drama) ui.updateDrama(data.drama, characters);
+        history.setCharacters(characters);
         ui.updateCharacterList(characters);
         ui.updateCharacterPanel(characters, currentTick);
       }
@@ -231,9 +238,11 @@
 
       // Pass buildings to UI for name lookups
       ui.setBuildings(worldState.buildings);
+      history.setBuildings(worldState.buildings);
 
       // Load characters
       characters = worldState.characters || [];
+      history.setCharacters(characters);
       currentTick = worldState.tick || 0;
       phase = worldState.phase || 'morning';
       if (worldState.time) clock = { ...worldState.time };

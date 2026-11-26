@@ -28,6 +28,7 @@
         <span class="connection-status" id="connection-status">Connecting</span>
       </div>
       <div class="topbar-right">
+        <button type="button" id="history-open" class="history-open" aria-controls="history-panel" aria-expanded="false">&#x1F4D6; History</button>
         <div class="speed-group" id="controls">
           <button class="speed-btn pause" id="btn-pause" title="Pause">| |</button>
           <button class="speed-btn" id="btn-1x" title="Normal speed">&gt;</button>
@@ -47,6 +48,28 @@
 
       <!-- Toast notifications -->
       <div class="toast-stack" id="toast-stack"></div>
+
+      <aside id="history-panel" class="history-panel" aria-label="Town history" hidden>
+        <div class="history-header"><div><span class="history-kicker">THE TOWN ARCHIVE</span><h2>Willowbrook Chronicle</h2></div>
+          <button id="history-close" type="button" aria-label="Close history">&times;</button></div>
+        <div class="history-filters">
+          <label>Category<select id="history-category"><option value="">All events</option>
+            <option value="relationship_changed">Relationships</option><option value="conflict">Conflicts</option>
+            <option value="community_event">Community</option><option value="occupation_changed">Occupations</option>
+            <option value="property_transferred">Property</option><option value="building_constructed">Buildings</option>
+            <option value="settlement_founded">Settlements founded</option><option value="settlement_expanded">Settlements expanded</option>
+            <option value="marriage">Marriage</option><option value="separation">Separation</option>
+            <option value="birth">Birth</option><option value="death">Death</option></select></label>
+          <label>Resident or ID<input id="history-character" list="history-residents" placeholder="All residents" autocomplete="off"><datalist id="history-residents"></datalist></label>
+          <label>From day<input id="history-from" type="number" min="1" placeholder="Any"></label>
+          <label>To day<input id="history-to" type="number" min="1" placeholder="Any"></label>
+          <div class="history-filter-actions"><button id="history-apply" type="button">Apply filters</button><button id="history-clear" type="button">Clear</button><button id="history-refresh" type="button">Refresh</button></div>
+        </div>
+        <p id="history-status" class="history-status" role="status"></p>
+        <div id="history-list" class="history-list"></div>
+        <div class="history-footer"><button id="history-more" type="button" hidden>Load older events</button></div>
+        <section id="history-detail" class="history-detail" hidden aria-label="Event details"></section>
+      </aside>
 
       <!-- Character Tray (bottom-left) -->
       <div class="floating-panel" id="character-tray">
@@ -107,6 +130,7 @@
   <script src="js/renderer.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/history.js"></script>
   <script src="js/input.js"></script>
   <script src="js/main.js"></script>
 </body>
