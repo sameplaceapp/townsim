@@ -116,6 +116,7 @@ class Partnerships {
     this.active.delete(p.id);
     for(const id of p.partners){this.byCharacter.delete(id);this.cooldowns[id]=day+FORMATION_COOLDOWN;}
     this.clearCourtships(p.partners);
+    this.households?.partnershipEnded(p);
   }
   toJSON() {
     return {version:1,active:[...this.active.values()].map(p=>({...p,partners:[...p.partners]})),

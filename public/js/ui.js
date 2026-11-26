@@ -390,6 +390,10 @@ class UI {
     const spouseHtml = char.spouseId ? `<div>Spouse: ${personLink(char.spouseId)}</div>` : '';
     const previousHtml = Array.isArray(char.previousSpouses) && char.previousSpouses.length
       ? `<div>Previous spouses: ${char.previousSpouses.map(p => personLink(p.id)).join(' ')}</div>` : '';
+    const residence = char.householdResidenceId && this.buildings[char.householdResidenceId];
+    const residenceName = residence?.name || char.householdResidenceId || 'Unassigned';
+    const housemates = char.householdId ? characters.filter(c => c.householdId === char.householdId && c.id !== char.id) : [];
+    const housematesHtml = housemates.length ? housemates.map(person => personLink(person.id)).join(' ') : 'Lives alone';
 
     this.charDetailEl.innerHTML = `
       <div class="char-detail-nav">
@@ -407,6 +411,7 @@ class UI {
       </div>
       <div class="char-section"><div class="char-section-title">Partnership</div>${partnerHtml}</div>
       <div class="char-section"><div class="char-section-title">Marital status</div><div>${maritalStatus}</div>${spouseHtml}${previousHtml}</div>
+      <div class="char-section"><div class="char-section-title">Household</div><div>Residence: ${this.escapeHtml(residenceName)}</div><div>Housemates: ${housematesHtml}</div></div>
       <div class="char-section">
         <div class="char-section-title">Needs</div>
         ${needBars}

@@ -4,6 +4,7 @@ class InteractionManager {
     this.historyIntegration = null;
     this.partnerships = null;
     this.marriages = null;
+    this.households = null;
   }
 
   updateRelationship(charA, charB, action) {
@@ -105,6 +106,7 @@ class InteractionManager {
     }
     if (this.partnerships) this.partnerships.onInteraction(charA, charB, action);
     if (this.marriages) this.marriages.onInteraction(charA, charB, action);
+    if (this.households) this.households.onInteraction(charA, charB, action);
   }
 
   ensureRelationship(charA, charB) {
