@@ -17,6 +17,7 @@ const { migrateBirthDates, recordBirthdayMilestones } = require('./aging');
 const { Partnerships } = require('./partnerships');
 const { Marriages } = require('./marriages');
 const { Households } = require('./households');
+const { Reproduction } = require('./reproduction');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -63,10 +64,12 @@ class SimulationEngine {
     this.partnerships.marriages = this.marriages;
     this.households = new Households(this.world, this.worldId, this.calendar, this.history, this.partnerships, savedState?.households);
     this.partnerships.households = this.households;
+    this.reproduction = new Reproduction(this.world, this.calendar, this.history, this.partnerships, this.households, config.reproduction, savedState?.reproduction);
     this.calendar.on('day', date => recordBirthdayMilestones(this.world.characters, this.historyIntegration, date));
     this.calendar.on('day', date => this.partnerships.prune(date.absoluteDay));
     this.calendar.on('day', date => this.marriages.prune(date.absoluteDay));
     this.calendar.on('day', date => this.households.dayStarted(date.absoluteDay));
+    this.calendar.on('day', date => this.reproduction.dayStarted(date.absoluteDay));
 
     // Initialize subsystems
     this.pathFinder = new PathFinder(this.world);
@@ -189,10 +192,11 @@ class SimulationEngine {
     this.world.tick++;
 
     // 2. Decay needs
-    this.needsManager.decayAll(this.world.characters);
+    const adults = this.world.characters.filter(c => c.lifecycle !== 'dependent');
+    this.needsManager.decayAll(adults);
 
     // 3. Execute current actions
-    for (const char of this.world.characters) {
+    for (const char of adults) {
       const result = char.path.length ? 'moving' : this.actionManager.executeAction(char);
 
       if (result === 'arrived') {
@@ -215,7 +219,7 @@ class SimulationEngine {
     }
 
     // 4. Check critical needs (auto-eat, auto-sleep)
-    for (const char of this.world.characters) {
+    for (const char of adults) {
       const override = this.needsManager.checkCritical(char, this.world);
       if (override) {
         this.actionManager.assignAction(char, override);
@@ -230,7 +234,7 @@ class SimulationEngine {
     const currentHour = this.world.time.hour;
     if (currentHour !== this.lastScheduleHour) {
       this.lastScheduleHour = currentHour;
-      for (const char of this.world.characters) {
+      for (const char of adults) {
         const schedAction = this.actionManager.handleSchedule(char, currentHour);
         if (schedAction) {
           this.actionManager.assignAction(char, schedAction);
@@ -255,7 +259,7 @@ class SimulationEngine {
     this.dramaEngine.update(this.world.tick);
 
     // 6. Detect decision points
-    const decisions = this.scheduler.evaluate(this.world.characters, this.world);
+    const decisions = this.scheduler.evaluate(adults, this.world);
 
     // 7-8. LLM batch decisions (async, non-blocking)
     if (decisions.length > 0) {
@@ -275,11 +279,11 @@ class SimulationEngine {
             // Validate social action targets
             if (result.action.target && this.socialActions.has(result.action.type)) {
               const targetChar = this.world.characters.find(c => c.id === result.action.target);
-              if (!targetChar) {
+              if (!targetChar || targetChar.lifecycle === 'dependent') {
                 // Try matching by name
                 const byName = this.world.characters.find(c =>
-                  c.name.toLowerCase() === result.action.target ||
-                  c.id === result.action.target
+                  c.lifecycle !== 'dependent' && (c.name.toLowerCase() === result.action.target ||
+                  c.id === result.action.target)
                 );
                 if (byName) {
                   result.action.target = byName.id;
@@ -492,6 +496,7 @@ class SimulationEngine {
     worldData.partnerships = this.partnerships.toJSON();
     worldData.marriages = this.marriages.toJSON();
     worldData.households = this.households.toJSON();
+    worldData.reproduction = this.reproduction.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 

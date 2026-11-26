@@ -394,6 +394,7 @@ class UI {
     const residenceName = residence?.name || char.householdResidenceId || 'Unassigned';
     const housemates = char.householdId ? characters.filter(c => c.householdId === char.householdId && c.id !== char.id) : [];
     const housematesHtml = housemates.length ? housemates.map(person => personLink(person.id)).join(' ') : 'Lives alone';
+    const parentsHtml = char.parentIds?.length ? `<div>Parents: ${char.parentIds.map(personLink).join(' ')}</div>` : '';
 
     this.charDetailEl.innerHTML = `
       <div class="char-detail-nav">
@@ -406,12 +407,13 @@ class UI {
           <div class="char-detail-name">${this.escapeHtml(char.name)}</div>
           <div class="char-detail-job">${this.escapeHtml(char.job)}</div>
           ${Number.isSafeInteger(char.age) && Number.isSafeInteger(char.birthday) ? `<div class="char-detail-job">Age ${char.age} · Birthday: day ${char.birthday} of the year</div>` : ''}
+          ${char.lifecycle === 'dependent' ? '<div class="char-detail-job">Dependent</div>' : ''}
           ${traitsHtml}
         </div>
       </div>
       <div class="char-section"><div class="char-section-title">Partnership</div>${partnerHtml}</div>
       <div class="char-section"><div class="char-section-title">Marital status</div><div>${maritalStatus}</div>${spouseHtml}${previousHtml}</div>
-      <div class="char-section"><div class="char-section-title">Household</div><div>Residence: ${this.escapeHtml(residenceName)}</div><div>Housemates: ${housematesHtml}</div></div>
+      <div class="char-section"><div class="char-section-title">Household</div><div>Residence: ${this.escapeHtml(residenceName)}</div><div>Housemates: ${housematesHtml}</div>${parentsHtml}</div>
       <div class="char-section">
         <div class="char-section-title">Needs</div>
         ${needBars}

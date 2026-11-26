@@ -228,7 +228,7 @@ class World {
 
   getCharactersNear(x, y, radius = 2) {
     return this.characters.filter(c =>
-      Math.abs(c.pos.x - x) <= radius && Math.abs(c.pos.y - y) <= radius
+      c.lifecycle !== 'dependent' && Math.abs(c.pos.x - x) <= radius && Math.abs(c.pos.y - y) <= radius
     );
   }
 
