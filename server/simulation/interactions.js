@@ -2,6 +2,7 @@ class InteractionManager {
   constructor() {
     this.dramaEngine = null; // Set externally by engine.js
     this.historyIntegration = null;
+    this.partnerships = null;
   }
 
   updateRelationship(charA, charB, action) {
@@ -101,6 +102,7 @@ class InteractionManager {
     if (this.dramaEngine) {
       this.dramaEngine.onInteraction(charA, charB, action);
     }
+    if (this.partnerships) this.partnerships.onInteraction(charA, charB, action);
   }
 
   ensureRelationship(charA, charB) {

@@ -14,6 +14,7 @@ const { randomUUID } = require('node:crypto');
 const { TownStatistics } = require('../statistics/townStatistics');
 const { Calendar } = require('./calendar');
 const { migrateBirthDates, recordBirthdayMilestones } = require('./aging');
+const { Partnerships } = require('./partnerships');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -55,7 +56,9 @@ class SimulationEngine {
     this.townStatistics = new TownStatistics(savedState?.townStatistics);
     this.history = new WorldHistory(this.world, savedState?.history);
     this.historyIntegration = new HistoricalEventIntegration(this.history, savedState?.historyIntegration);
+    this.partnerships = new Partnerships(this.world, this.calendar, this.history, savedState?.partnerships);
     this.calendar.on('day', date => recordBirthdayMilestones(this.world.characters, this.historyIntegration, date));
+    this.calendar.on('day', date => this.partnerships.prune(date.absoluteDay));
 
     // Initialize subsystems
     this.pathFinder = new PathFinder(this.world);
@@ -69,6 +72,7 @@ class SimulationEngine {
     // Wire drama engine into subsystems
     this.interactions.dramaEngine = this.dramaEngine;
     this.interactions.historyIntegration = this.historyIntegration;
+    this.interactions.partnerships = this.partnerships;
     this.dramaEngine.historyIntegration = this.historyIntegration;
     this.llmBatcher.promptBuilder.dramaEngine = this.dramaEngine;
 
@@ -396,7 +400,7 @@ class SimulationEngine {
       calendar: this.calendar?.current(),
       phase: this.world.phase,
       timeString: this.world.getTimeString(),
-      characters: this.world.characters.map(c => c.toSummary(this.calendar)),
+      characters: this.world.characters.map(c => ({ ...c.toSummary(this.calendar), partnerId: this.partnerships?.partnerOf(c.id) ?? null })),
       log: this.world.activityLog.slice(-100),
       drama: this.getDramaDisplayState()
     };
@@ -429,7 +433,9 @@ class SimulationEngine {
 
   getState() {
     this.sync();
-    return { ...this.world.toJSON(this.calendar), timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker(), calendar: this.calendar?.current() };
+    const world = this.world.toJSON(this.calendar);
+    world.characters = world.characters.map(c => ({ ...c, partnerId: this.partnerships?.partnerOf(c.id) ?? null }));
+    return { ...world, timing: this.getTiming(), drama: this.getDramaDisplayState(), visitMarker: this.getVisitMarker(), calendar: this.calendar?.current() };
   }
 
   getVisitMarker() { return { worldId: this.worldId, lastEventId: this.history?.lastId() ?? null,
@@ -468,6 +474,7 @@ class SimulationEngine {
     worldData.history = this.history.toJSON();
     worldData.townStatistics = this.townStatistics.toJSON();
     worldData.historyIntegration = this.historyIntegration.toJSON();
+    worldData.partnerships = this.partnerships.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 
