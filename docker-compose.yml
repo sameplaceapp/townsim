@@ -13,11 +13,6 @@ services:
     volumes:
       - townsim-data:/app/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/stats"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
 volumes:
   townsim-data:
