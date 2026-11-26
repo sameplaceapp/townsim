@@ -1303,3 +1303,6 @@ body {
 .town-stats-actions button:disabled { opacity:.45; cursor:default; }
 #town-stats-refresh { margin-top:12px; }
 @media (max-width:767px) { .town-stats-panel { top:8px; right:8px; width:min(460px,calc(100vw - 16px)); max-height:calc(100% - 16px); } }
+
+.partner-link { padding:4px 8px; border:var(--border-mid); border-radius:var(--radius-sm); background:var(--bg-secondary); color:var(--text-primary); font:700 12px 'Nunito',sans-serif; cursor:pointer; }
+.partner-link:hover { background:var(--bg-hover); }

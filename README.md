@@ -474,3 +474,20 @@ node scripts/aging-demo.js serve /tmp/willowbrook-aging-check.json
 ```
 
 Open `http://127.0.0.1:3017` in Chromium. The fixture is paused at Year 1, Day 12, 23:59: Alice is 29 with a birthday on day 1 of the year, and Bob is 31 with a birthday on day 6. Select each through Townsfolk to inspect their profiles. Select 5×, wait for Year 2, Day 13, and pause: Alice should be 30 while Bob remains 31. `/api/characters` shows the same values, and History contains Alice's age-30 milestone. Stop with Ctrl+C and repeat the `serve` command to verify the ages and milestone persist. The fixture uses no LLM, binds only to localhost, and refuses to overwrite an existing file.
+
+### Romantic partnerships
+
+Adult residents can form an exclusive partnership after multiple accepted romantic interactions across at least three simulation days, with interest expressed by both, sufficient mutual affection, trust, attraction and interaction history, and a deterministic compatibility decision influenced by personality. Cautious residents need an additional day. These checks use existing relationship scores; the partnership does not introduce a competing score. Some pairs never form a partnership. Normal drama pacing still governs romantic and conflict actions, and no AI is required.
+
+Partners can separate only after at least five simulation days together and severe relationship strain shown through conflict on three different days. A six-day cooldown follows separation. Formation and separation are recorded in permanent history; the saved shared partnership state records the active relationship and the history preserves ended ones. Existing saves without partnerships load with everyone single. Profiles show the current partner, if any, and link to that resident's profile. Eligibility rejects known close relatives—including parents, siblings, grandparents, aunts, uncles and first cousins—when stable `parentIds` and the necessary parent records are present. The current game has no genealogy system, so unknown family relationships cannot be inferred; future kinship features must supply and extend these checks. Back up the world before rollback: older application versions do not preserve partnership state when they save.
+
+To inspect a controlled example without changing your world:
+
+```bash
+npm ci
+node scripts/partnership-demo.js create /tmp/willowbrook-partnership-check.json
+node scripts/partnership-demo.js serve /tmp/willowbrook-partnership-check.json &
+fixture_pid=$!
+```
+
+Open `http://127.0.0.1:3017` in Chromium. The terminal identifies the compatible adult pair. Inspect their profiles; both start single. Run `kill -USR1 "$fixture_pid"` three times, waiting for the confirmation after each. In this disposable fixture only, each signal advances to the next simulated day and applies one accepted, paced flirt, alternating initiators. After the third, both profiles should identify each other; selecting the partner link opens their profile. History shows the formation event. Stop with `kill -TERM "$fixture_pid"` and run the same `serve` command again to confirm the partnership persists. The fixture binds only to localhost, uses no LLM, and refuses to overwrite an existing file. It is not a production control.

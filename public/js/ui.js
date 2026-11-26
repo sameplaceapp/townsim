@@ -374,6 +374,12 @@ class UI {
     }
 
     const isFollowing = this.followingCharId === char.id;
+    const partner = char.partnerId ? characters.find(c => c.id === char.partnerId) : null;
+    const partnerHtml = char.partnerId
+      ? partner
+        ? `<button type="button" class="partner-link" id="detail-partner">${this.escapeHtml(partner.name)} ↗</button>`
+        : `<span>${this.escapeHtml(char.partnerId)} (not currently in town)</span>`
+      : '<span>Single</span>';
 
     this.charDetailEl.innerHTML = `
       <div class="char-detail-nav">
@@ -389,6 +395,7 @@ class UI {
           ${traitsHtml}
         </div>
       </div>
+      <div class="char-section"><div class="char-section-title">Partnership</div>${partnerHtml}</div>
       <div class="char-section">
         <div class="char-section-title">Needs</div>
         ${needBars}
@@ -405,6 +412,9 @@ class UI {
     `;
 
     // Wire back button
+    if (partner) document.getElementById('detail-partner').addEventListener('click', () => {
+      if (this.onDirectorySelect) this.onDirectorySelect(partner.id);
+    });
     document.getElementById('detail-back').addEventListener('click', () => {
       this.selectedCharId = null;
       this.charDetailEl.style.display = 'none';
