@@ -11,6 +11,7 @@ const { StateManager } = require('../persistence/stateManager');
 const { WorldHistory } = require('../history/worldHistory');
 const { HistoricalEventIntegration } = require('../history/eventIntegration');
 const { randomUUID } = require('node:crypto');
+const { TownStatistics } = require('../statistics/townStatistics');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -47,6 +48,7 @@ class SimulationEngine {
       console.log(`Restored state at tick ${this.world.tick}`);
     }
 
+    this.townStatistics = new TownStatistics(savedState?.townStatistics);
     this.history = new WorldHistory(this.world, savedState?.history);
     this.historyIntegration = new HistoricalEventIntegration(this.history, savedState?.historyIntegration);
 
@@ -100,7 +102,11 @@ class SimulationEngine {
       remaining -= step;
       if (this.minuteProgress >= minuteInterval - 0.000001) {
         this.minuteProgress = 0;
+        const completedDay = this.world.time.day;
         this.world.advanceClock(1);
+        if (this.world.time.day !== completedDay) {
+          this.townStatistics.observe(completedDay, this.world.characters.length);
+        }
       }
       if (this.movementProgress >= movementInterval - 0.000001) {
         this.movementProgress = 0;
@@ -451,6 +457,7 @@ class SimulationEngine {
     worldData.characters = this.world.characters.map(c => ({ ...c, path: [...c.path] }));
     worldData.drama = this.dramaEngine.toJSON();
     worldData.history = this.history.toJSON();
+    worldData.townStatistics = this.townStatistics.toJSON();
     worldData.historyIntegration = this.historyIntegration.toJSON();
     this.stateManager.saveRaw(worldData);
   }

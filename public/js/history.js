@@ -44,14 +44,14 @@ class HistoryPanel {
     }));
   }
   setBuildings(buildings) { this.buildings = buildings || {}; }
-  open() { this.panel.hidden = false; this.openButton.setAttribute('aria-expanded', 'true'); this.setCharacters(this.characters); this.apply(); }
-  close() {
+  open() { if (this.onOpen) this.onOpen(); this.panel.hidden = false; this.openButton.setAttribute('aria-expanded', 'true'); this.setCharacters(this.characters); this.apply(); }
+  close(restoreFocus = true) {
     this.panel.hidden = true;
     this.openButton.setAttribute('aria-expanded', 'false');
     this.generation++;
     if (this.controller) this.controller.abort();
     this.loading = false;
-    this.openButton.focus();
+    if (restoreFocus) this.openButton.focus();
   }
   apply() {
     const input = this.character.value.trim();

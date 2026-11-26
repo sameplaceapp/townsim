@@ -1280,3 +1280,26 @@ body {
 #welcome-events li { border-bottom: var(--border-light); padding: 7px 0; display: flex; flex-direction: column; }
 #welcome-events li span { color: var(--text-muted); font-size: 11px; }
 #welcome-history, #welcome-retry { margin-top: 10px; padding: 6px 10px; border: var(--border-mid); border-radius: var(--radius-sm); background: var(--accent-primary); color: white; font: 700 12px 'Nunito', sans-serif; cursor: pointer; }
+
+.town-stats-panel[hidden] { display:none; }
+.town-stats-panel { position:absolute; z-index:70; top:14px; right:14px; width:min(460px,calc(100vw - 28px)); max-height:calc(100% - 28px); overflow:hidden; display:flex; flex-direction:column; background:var(--bg-primary); border:var(--border-mid); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); }
+#town-stats-close { border:0; background:none; color:var(--text-secondary); font-size:24px; line-height:1; cursor:pointer; }
+.town-stats-body { overflow-y:auto; padding:0 14px 14px; }
+.town-stats-body .history-status { padding:8px 0; }
+.town-stats-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.town-stats-cards div { display:flex; flex-direction:column; padding:8px; border:var(--border-light); border-radius:var(--radius-sm); background:var(--bg-secondary); }
+.town-stats-cards strong { font-size:20px; line-height:1.2; color:var(--accent-primary); }
+.town-stats-cards span, .town-stats-section p, .town-stats-section li, .town-stats-section summary { font-size:11px; color:var(--text-secondary); }
+.town-stats-section { margin-top:12px; padding-top:10px; border-top:var(--border-mid); }
+.town-stats-section h3 { font-size:13px; }
+#town-stats-chart { display:block; width:100%; height:auto; margin:5px 0; background:var(--bg-secondary); border-radius:var(--radius-sm); }
+#town-stats-chart[hidden] { display:none; }
+.stats-axis { stroke:var(--text-muted); stroke-width:1; }
+.stats-label { fill:var(--text-secondary); font:11px 'Nunito',sans-serif; }
+.stats-dot { fill:var(--accent-success); stroke:var(--bg-primary); stroke-width:1; }
+.town-stats-section ul { padding-left:18px; }
+.town-stats-actions { display:flex; gap:8px; margin-top:8px; }
+.town-stats-actions button, #town-stats-refresh { padding:5px 9px; border:var(--border-mid); border-radius:var(--radius-sm); background:var(--bg-secondary); color:var(--text-primary); font:700 11px 'Nunito',sans-serif; cursor:pointer; }
+.town-stats-actions button:disabled { opacity:.45; cursor:default; }
+#town-stats-refresh { margin-top:12px; }
+@media (max-width:767px) { .town-stats-panel { top:8px; right:8px; width:min(460px,calc(100vw - 16px)); max-height:calc(100% - 16px); } }

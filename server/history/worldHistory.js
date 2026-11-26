@@ -58,6 +58,7 @@ function validateInput(input) {
 class WorldHistory {
   #events = [];
   #byId = new Map();
+  #counts = Object.create(null);
 
   constructor(world, saved) {
     this.world = world;
@@ -74,6 +75,7 @@ class WorldHistory {
       const record = freeze({ ...data, time: { ...event.time } });
       this.#byId.set(record.id, record);
       this.#events.push(record);
+      this.#counts[record.type] = (this.#counts[record.type] || 0) + 1;
     }
   }
 
@@ -94,6 +96,7 @@ class WorldHistory {
     const record = freeze({ ...data, time: { ...this.world.time } });
     this.#events.push(record);
     this.#byId.set(record.id, record);
+    this.#counts[record.type] = (this.#counts[record.type] || 0) + 1;
     return record;
   }
 
@@ -141,6 +144,7 @@ class WorldHistory {
 
   lastId() { return this.#events.at(-1)?.id ?? null; }
   count() { return this.#events.length; }
+  countsByType() { return { ...this.#counts }; }
 
   // Summarize in one pass, retaining only a small selection of actual records.
   since(id) {

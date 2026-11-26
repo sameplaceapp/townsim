@@ -29,6 +29,7 @@
       </div>
       <div class="topbar-right">
         <button type="button" id="history-open" class="history-open" aria-controls="history-panel" aria-expanded="false">&#x1F4D6; History</button>
+        <button type="button" id="town-stats-open" class="history-open" aria-controls="town-stats-panel" aria-expanded="false">&#x1F4CA; Stats</button>
         <div class="speed-group" id="controls">
           <button class="speed-btn pause" id="btn-pause" title="Pause">| |</button>
           <button class="speed-btn" id="btn-1x" title="Normal speed">&gt;</button>
@@ -48,6 +49,28 @@
 
       <!-- Toast notifications -->
       <div class="toast-stack" id="toast-stack"></div>
+
+      <aside id="town-stats-panel" class="town-stats-panel" aria-label="Town statistics" hidden>
+        <div class="history-header"><div><span class="history-kicker">A RECORD OF OUR TOWN</span><h2>Town Statistics</h2></div>
+          <button id="town-stats-close" type="button" aria-label="Close town statistics">&times;</button></div>
+        <div class="town-stats-body">
+          <p id="town-stats-status" class="history-status" role="status"></p>
+          <div class="town-stats-cards">
+            <div><strong id="town-stats-population">—</strong><span>Residents</span></div>
+            <div><strong id="town-stats-buildings">—</strong><span>Buildings</span></div>
+            <div><strong id="town-stats-events">—</strong><span>Recorded events</span></div>
+          </div>
+          <div class="town-stats-section"><h3>Population over time</h3>
+            <p>Each dot is an observation at the end of a simulation day. Missing days are not estimated.</p>
+            <svg id="town-stats-chart" role="img" aria-label="Population by simulation day" viewBox="0 0 640 200"></svg>
+            <p id="town-stats-empty" hidden>No completed-day observations yet.</p>
+            <details><summary>View observations</summary><ul id="town-stats-observations"></ul></details>
+            <div class="town-stats-actions"><button id="town-stats-older" type="button">Older days</button><button id="town-stats-newer" type="button">Newer days</button></div>
+          </div>
+          <div class="town-stats-section"><h3>Recorded events by category</h3><ul id="town-stats-categories"></ul></div>
+          <button id="town-stats-refresh" type="button">Refresh</button>
+        </div>
+      </aside>
 
       <section id="welcome-back" class="welcome-back" aria-label="While you were away" hidden>
         <div class="welcome-header"><div><span class="history-kicker">A LETTER FROM WILLOWBROOK</span><h2>While you were away</h2></div>
@@ -141,6 +164,7 @@
   <script src="js/ui.js"></script>
   <script src="js/history.js"></script>
   <script src="js/welcome.js"></script>
+  <script src="js/town-statistics.js"></script>
   <script src="js/input.js"></script>
   <script src="js/main.js"></script>
 </body>
