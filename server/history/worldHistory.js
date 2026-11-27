@@ -3,7 +3,7 @@ const { isDeepStrictEqual } = require('node:util');
 // Event types are deliberately explicit; add a new type when a simulation
 // system is ready to record it, without changing the stored schema.
 const EVENT_TYPES = Object.freeze([
-  'relationship_changed', 'conflict', 'birthday_milestone', 'marriage', 'separation', 'divorce', 'household_formed', 'household_relocated', 'birth', 'death',
+  'relationship_changed', 'conflict', 'birthday_milestone', 'life_stage', 'marriage', 'separation', 'divorce', 'household_formed', 'household_relocated', 'birth', 'death',
   'occupation_changed', 'property_transferred', 'building_constructed',
   'settlement_founded', 'settlement_expanded', 'community_event'
 ]);

@@ -1,5 +1,6 @@
 const {createHash,randomUUID}=require('node:crypto');
 const {ageOnDate}=require('./aging');
+const {isAdult}=require('./development');
 const nowTime=world=>({...world.time});
 const validTime=t=>t&&Number.isSafeInteger(t.day)&&t.day>=1&&Number.isInteger(t.hour)&&t.hour>=0&&t.hour<24&&Number.isInteger(t.minute)&&t.minute>=0&&t.minute<60;
 const minute=t=>((t.day-1)*24+t.hour)*60+t.minute;
@@ -67,7 +68,7 @@ class Households {
     catch(err){console.error('Unable to record household transition:',err.message);return false;}
   }
   onInteraction(a,b,action){
-    if(!a||!b||a.id===b.id)return;
+    if(!a||!b||!isAdult(a)||!isAdult(b)||a.id===b.id)return;
     const partnership=this.partnerships.byCharacter.get(a.id);
     if(!partnership||this.partnerships.byCharacter.get(b.id)!==partnership)return;
     const ha=this.byMember.get(a.id),hb=this.byMember.get(b.id),day=this.world.time.day;

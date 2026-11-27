@@ -1,5 +1,6 @@
 const {createHash, randomUUID}=require('node:crypto');
 const {ageOnDate}=require('./aging');
+const {isAdult}=require('./development');
 
 const MIN_AGE=18, MIN_INTERACTIONS=5, FORMATION_COOLDOWN=6, MIN_PARTNERSHIP_DAYS=5;
 const idKey=(a,b)=>JSON.stringify([a,b].sort());
@@ -54,7 +55,7 @@ class Partnerships {
   }
   partnerOf(id) { const p=this.byCharacter.get(id);return p ? p.partners.find(other=>other!==id) : null; }
   eligible(a,b) {
-    if(!a||!b||a.id===b.id||!this.world.characters.includes(a)||!this.world.characters.includes(b)||
+    if(!a||!b||!isAdult(a)||!isAdult(b)||a.id===b.id||!this.world.characters.includes(a)||!this.world.characters.includes(b)||
         !a.birthDate||!b.birthDate||this.byCharacter.has(a.id)||this.byCharacter.has(b.id)||related(a,b,this.world.characters))return false;
     const date=this.calendar.current();
     return ageOnDate(a.birthDate,date)>=MIN_AGE&&ageOnDate(b.birthDate,date)>=MIN_AGE&&

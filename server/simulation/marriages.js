@@ -1,6 +1,7 @@
 const {createHash,randomUUID}=require('node:crypto');
 const {ageOnDate}=require('./aging');
 const {related}=require('./partnerships');
+const {isAdult}=require('./development');
 
 const MARRIAGE_WAIT=12, SEPARATION_WAIT=6, MARRIAGE_INTERACTIONS=3;
 const timeCopy=t=>({day:t.day,hour:t.hour,minute:t.minute});
@@ -89,7 +90,7 @@ class Marriages {
     catch(err){console.error('Unable to record marriage transition:',err.message);return false;}
   }
   onInteraction(a,b,action) {
-    if(!a||!b||a.id===b.id)return;
+    if(!a||!b||!isAdult(a)||!isAdult(b)||a.id===b.id)return;
     const record=this.current.get(a.id);
     if(record) {
       if(this.current.get(b.id)!==record)return;

@@ -1,3 +1,4 @@
+const {isAdult,isInfant}=require('./development');
 class InteractionManager {
   constructor() {
     this.dramaEngine = null; // Set externally by engine.js
@@ -8,6 +9,9 @@ class InteractionManager {
   }
 
   updateRelationship(charA, charB, action) {
+    if(!charA||!charB||isInfant(charA)||isInfant(charB))return;
+    const adultInteraction=isAdult(charA)&&isAdult(charB);
+    if(!adultInteraction&&!['chat','greet','gift','comfort','apologize','forgive'].includes(action))return;
     this.ensureRelationship(charA, charB);
     this.ensureRelationship(charB, charA);
 
@@ -101,12 +105,12 @@ class InteractionManager {
     }
 
     // Notify drama engine of significant interactions
-    if (this.dramaEngine) {
+    if (this.dramaEngine && adultInteraction) {
       this.dramaEngine.onInteraction(charA, charB, action);
     }
-    if (this.partnerships) this.partnerships.onInteraction(charA, charB, action);
-    if (this.marriages) this.marriages.onInteraction(charA, charB, action);
-    if (this.households) this.households.onInteraction(charA, charB, action);
+    if (adultInteraction && this.partnerships) this.partnerships.onInteraction(charA, charB, action);
+    if (adultInteraction && this.marriages) this.marriages.onInteraction(charA, charB, action);
+    if (adultInteraction && this.households) this.households.onInteraction(charA, charB, action);
   }
 
   ensureRelationship(charA, charB) {

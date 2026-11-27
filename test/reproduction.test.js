@@ -22,7 +22,7 @@ test('pregnancy survives restart and gives one dependent child with parents, hom
   engine.save();engine=new SimulationEngine(config,null,()=>0,new StateManager(f.file));
   assert.equal(engine.reproduction.pending[0].id,pregnancy.id);day(engine,4);assert.equal(engine.world.characters.length,12);
   day(engine,5);assert.equal(engine.world.characters.length,13);const child=engine.world.characters.at(-1);
-  assert.deepEqual(child.parentIds,[a.id,b.id]);assert.equal(child.toSummary(engine.calendar).age,0);assert.equal(child.lifecycle,'dependent');
+  assert.deepEqual(child.parentIds,[a.id,b.id]);assert.equal(child.toSummary(engine.calendar).age,0);assert.equal(child.lifecycle,'infant');
   assert.equal(child.job,'dependent');assert.deepEqual(child.schedule,{});assert.equal(engine.households.info(child.id).id,engine.households.info(a.id).id);
   assert.equal(engine.history.query({type:'birth'}).events.length,1);assert.equal(engine.history.since(null).events.some(e=>e.type==='birth'),true);
   assert.equal(engine.townStatistics.observe(5,engine.world.characters.length),true);assert.equal(engine.townStatistics.page().observations.at(-1).population,13);
@@ -66,7 +66,7 @@ test('simulation speeds advance the same gestation in simulated days and pausing
    assert.equal(engine.world.time.day,2);assert.equal(engine.reproduction.pending.length,1);
    engine.setSpeed(0);now+=10*1440*config.simulation.minuteInterval;engine.sync();assert.equal(engine.world.time.day,2);
    engine.setSpeed(speed);now+=3*1440*config.simulation.minuteInterval/speed;engine.sync();engine.stop();
-   assert.equal(engine.world.time.day,5);assert.equal(engine.world.characters.filter(c=>c.lifecycle==='dependent').length,1);
+   assert.equal(engine.world.time.day,5);assert.equal(engine.world.characters.filter(c=>c.lifecycle==='infant').length,1);
   }finally{engine.stop();fs.rmSync(dir,{recursive:true,force:true});}
  }
 });

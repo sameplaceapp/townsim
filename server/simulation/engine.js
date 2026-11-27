@@ -18,6 +18,7 @@ const { Partnerships } = require('./partnerships');
 const { Marriages } = require('./marriages');
 const { Households } = require('./households');
 const { Reproduction } = require('./reproduction');
+const { Development, isAdult, isInfant } = require('./development');
 
 class SimulationEngine {
   constructor(config, wss, now = () => performance.now(), stateManager = new StateManager()) {
@@ -58,6 +59,7 @@ class SimulationEngine {
     migrateBirthDates(this.world.characters, this.calendar);
     this.townStatistics = new TownStatistics(savedState?.townStatistics);
     this.history = new WorldHistory(this.world, savedState?.history);
+    this.development = new Development(this.world, this.calendar, this.history, config.lifecycle, savedState?.development);
     this.historyIntegration = new HistoricalEventIntegration(this.history, savedState?.historyIntegration);
     this.partnerships = new Partnerships(this.world, this.calendar, this.history, savedState?.partnerships);
     this.marriages = new Marriages(this.world, this.calendar, this.history, this.partnerships, savedState?.marriages);
@@ -65,6 +67,7 @@ class SimulationEngine {
     this.households = new Households(this.world, this.worldId, this.calendar, this.history, this.partnerships, savedState?.households);
     this.partnerships.households = this.households;
     this.reproduction = new Reproduction(this.world, this.calendar, this.history, this.partnerships, this.households, config.reproduction, savedState?.reproduction);
+    this.calendar.on('day', date => this.development.dayStarted(date));
     this.calendar.on('day', date => recordBirthdayMilestones(this.world.characters, this.historyIntegration, date));
     this.calendar.on('day', date => this.partnerships.prune(date.absoluteDay));
     this.calendar.on('day', date => this.marriages.prune(date.absoluteDay));
@@ -192,11 +195,12 @@ class SimulationEngine {
     this.world.tick++;
 
     // 2. Decay needs
-    const adults = this.world.characters.filter(c => c.lifecycle !== 'dependent');
-    this.needsManager.decayAll(adults);
+    const adults = this.world.characters.filter(isAdult);
+    const mobile = this.world.characters.filter(c => !isInfant(c));
+    this.needsManager.decayAll(mobile);
 
     // 3. Execute current actions
-    for (const char of adults) {
+    for (const char of mobile) {
       const result = char.path.length ? 'moving' : this.actionManager.executeAction(char);
 
       if (result === 'arrived') {
@@ -253,6 +257,7 @@ class SimulationEngine {
           }
         }
       }
+      for (const char of mobile) if (!isAdult(char)) this.development.schedule(char, currentHour, this.actionManager, this.interactions, this.dramaEngine);
     }
 
     // 5.5 Update drama engine
@@ -279,10 +284,10 @@ class SimulationEngine {
             // Validate social action targets
             if (result.action.target && this.socialActions.has(result.action.type)) {
               const targetChar = this.world.characters.find(c => c.id === result.action.target);
-              if (!targetChar || targetChar.lifecycle === 'dependent') {
+              if (!targetChar || isInfant(targetChar)) {
                 // Try matching by name
                 const byName = this.world.characters.find(c =>
-                  c.lifecycle !== 'dependent' && (c.name.toLowerCase() === result.action.target ||
+                  !isInfant(c) && (c.name.toLowerCase() === result.action.target ||
                   c.id === result.action.target)
                 );
                 if (byName) {
@@ -295,6 +300,9 @@ class SimulationEngine {
 
             // Apply the same pacing and context checks to rule-based and AI choices.
             const targetChar = this.world.characters.find(c => c.id === result.action.target);
+            if (targetChar && !isAdult(targetChar) && !['chat','greet','gift','comfort','apologize','forgive'].includes(result.action.type)) {
+              result.action = {type:'idle'}; result.say = null; result.think = null; result.emotion = null;
+            }
             if (!this.dramaEngine.allowAction(result.character, targetChar, result.action.type)) {
               result.action = this.dramaEngine.canInteract(result.character, targetChar)
                 ? { type: 'chat', target: targetChar.id } : { type: 'idle' };
@@ -497,6 +505,7 @@ class SimulationEngine {
     worldData.marriages = this.marriages.toJSON();
     worldData.households = this.households.toJSON();
     worldData.reproduction = this.reproduction.toJSON();
+    worldData.development = this.development.toJSON();
     this.stateManager.saveRaw(worldData);
   }
 
