@@ -564,3 +564,18 @@ fixture_pid=$!
 ```
 
 Choose a different absolute path if the fixture exists. Open `http://127.0.0.1:3017` in Chromium and search the resident directory for Robin. Their profile starts at age 0 as an infant, with Alice listed as a parent. Run `kill -USR1 "$fixture_pid"` once and wait for confirmation; Robin should be age 3 and a child. Repeat to reach age 13 (teenager), then again to reach age 18 (adult). The fixture advances the existing calendar to each birthday; it does not wait through the intervening real time. Inspect the interest, aspiration, personality and household, and filter History to Life milestones for childhood and adulthood. Stop the server with `kill -TERM "$fixture_pid"`, restart the same `serve` command and verify that Robin and the milestones remain. Stop the restarted process with Ctrl+C. The fixture uses no AI, binds to localhost, refuses to overwrite an existing save and does not touch the real world.
+
+### Inherited personality
+
+Newborns start with two or occasionally three traits selected from the existing personality vocabulary in `config/characters.json`. The selection tries to take one trait from each available biological parent, without combining the opposing pairs cheerful/grumpy, hardworking/lazy or adventurous/cautious. Some children receive an additional trait drawn from the same vocabulary. The child's unique ID supplies repeatable variation; no AI request is involved. Temporary moods and needs are never inherited. If one parent's character record is unavailable, the available parent and a valid varied trait are used; parent IDs are still preserved.
+
+The birth event stores the initial traits, each available parent's traits at the time, and which parent or parents had each selected trait. Later development can change the current personality without changing that birth snapshot. Older children keep their existing personalities and birth records; no earlier inheritance is invented. The existing development limit of four traits still applies, so a child born with three traits has room for one later addition.
+
+To compare several real birth records without touching a real save, from the repository run:
+
+```sh
+node scripts/personality-demo.js create /tmp/willowbrook-personality-check.json
+node scripts/personality-demo.js inspect /tmp/willowbrook-personality-check.json
+```
+
+Choose a different absolute path if the fixture exists. The command creates five controlled births from Alice (cheerful, artistic) and Bob (kind, cautious), then prints each child's traits and whether they match Alice, Bob, or variation. The second command reloads the saved fixture and prints the same recorded results. This fixture directly triggers births for testing; normal family planning and population limits are unchanged. It does not start a server or use an LLM and refuses to overwrite an existing save.

@@ -3,6 +3,7 @@ const {Character}=require('./character');
 const {ageOnDate}=require('./aging');
 const {related,mutualContext}=require('./partnerships');
 const {isAdult}=require('./development');
+const {inheritPersonality}=require('./personalityInheritance');
 
 const defaults={minAge:20,maxGestationalAge:45,maxOtherAge:60,minPartnershipDays:24,gestationDays:9,birthCooldownDays:24,maxChildren:3,maxPopulation:40,maxBirthsPerYear:3,dailyChance:0.015};
 const hash=(...parts)=>createHash('sha256').update(JSON.stringify(parts)).digest();
@@ -80,9 +81,10 @@ class Reproduction {
     const names=['Alex','Amelia','Avery','Eli','Ella','Finn','Hazel','Jamie','Jules','Maya','Milo','Nora','Olive','Owen','Rowan','Sam','Theo','Willow'];
     const digest=hash(id,'name'),name=names[digest.readUInt32BE(0)%names.length];
     const date=this.calendar.current(),building=this.world.buildings[household.residenceId];
-    const child=new Character({id,name,job:'dependent',personality:['quiet'],home:household.residenceId,color:'#e9c9a0',birthDate:{year:date.year,dayOfYear:date.dayOfYear}}, {x:building.door[0],y:building.door[1]});
+    const inheritance=inheritPersonality(id,p.parents.map(parentId=>this.world.characters.find(c=>c.id===parentId)));
+    const child=new Character({id,name,job:'dependent',personality:[...inheritance.traits],home:household.residenceId,color:'#e9c9a0',birthDate:{year:date.year,dayOfYear:date.dayOfYear}}, {x:building.door[0],y:building.door[1]});
     child.parentIds=[...p.parents];child.lifecycle='infant';child.workplace=null;child.schedule={};child.activity='sleep';child.location=household.residenceId;child.inside=true;
-    this.history.record({id:`birth:${id}`,type:'birth',description:`${name} was born`,entities:[{kind:'character',id},...p.parents.map(id=>({kind:'character',id})),{kind:'building',id:household.residenceId}],metadata:{childId:id,parentIds:[...p.parents],householdId:household.id,pregnancyId:p.id}});
+    this.history.record({id:`birth:${id}`,type:'birth',description:`${name} was born`,entities:[{kind:'character',id},...p.parents.map(id=>({kind:'character',id})),{kind:'building',id:household.residenceId}],metadata:{childId:id,parentIds:[...p.parents],householdId:household.id,pregnancyId:p.id,personalityInheritance:inheritance}});
     this.world.characters.push(child);household.members.push(id);this.households.byMember.set(id,household);
     for(const parentId of p.parents)this.lastBirth[parentId]=this.world.time.day;
     this.recentBirths.push(this.world.time.day);this.pending=this.pending.filter(x=>x!==p);
