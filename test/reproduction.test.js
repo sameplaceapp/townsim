@@ -80,3 +80,39 @@ test('malformed pending pregnancy is rejected without overwriting the saved worl
   assert.equal(fs.readFileSync(file,'utf8'),before);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('birth records preserve inherited traits independently of later development and restart',()=>{
+ const f=setup();let {engine,a,b}=f;
+ try{
+  const beforeA=[...a.personality],beforeB=[...b.personality];day(engine,2);day(engine,5);
+  const child=engine.world.characters.at(-1),birth=engine.history.query({type:'birth'}).events[0],inherited=birth.metadata.personalityInheritance;
+  assert.deepEqual(child.personality,inherited.traits);assert.deepEqual(inherited.parents.map(p=>p.id),[a.id,b.id]);
+  assert.deepEqual(a.personality,beforeA);assert.deepEqual(b.personality,beforeB);
+  const snapshot=structuredClone(inherited);engine.development.developTrait(child,'child');
+  assert.deepEqual(engine.history.get(birth.id).metadata.personalityInheritance,snapshot);
+  engine.save();engine=new SimulationEngine(config,null,()=>0,new StateManager(f.file));
+  assert.deepEqual(engine.history.get(birth.id).metadata.personalityInheritance,snapshot);
+  assert.deepEqual(engine.world.characters.find(c=>c.id===child.id).personality,child.personality);
+  assert.equal(engine.world.characters.find(c=>c.id===child.id).personalityAbbr,child.personalityAbbr);
+ }finally{fs.rmSync(f.dir,{recursive:true,force:true});}
+});
+
+test('a missing biological parent does not prevent birth or erase their historical ID',()=>{
+ const f=setup();const {engine,a,b}=f;
+ try{
+  day(engine,2);engine.world.characters=engine.world.characters.filter(c=>c.id!==b.id);
+  day(engine,5);const child=engine.world.characters.at(-1),birth=engine.history.query({type:'birth'}).events[0];
+  assert.deepEqual(child.parentIds,[a.id,b.id]);assert.deepEqual(birth.metadata.personalityInheritance.parents.map(p=>p.id),[a.id]);
+  assert.ok(child.personality.some(t=>a.personality.includes(t)));
+ }finally{fs.rmSync(f.dir,{recursive:true,force:true});}
+});
+
+test('loading an older child leaves their existing personality untouched',()=>{
+ const f=setup();let {engine}=f;
+ try{
+  day(engine,2);day(engine,5);const child=engine.world.characters.at(-1);child.personality=['quiet','practical'];child.personalityAbbr='qut.prc';engine.save();
+  const store=new StateManager(f.file),state=store.load(),birth=state.history.events.find(e=>e.type==='birth');delete birth.metadata.personalityInheritance;store.saveRaw(state);
+  engine=new SimulationEngine(config,null,()=>0,new StateManager(f.file));const restored=engine.world.characters.find(c=>c.id===child.id);
+  assert.deepEqual(restored.personality,['quiet','practical']);assert.equal(restored.personalityAbbr,'qut.prc');assert.equal(engine.history.get(birth.id).metadata.personalityInheritance,undefined);
+ }finally{fs.rmSync(f.dir,{recursive:true,force:true});}
+});
