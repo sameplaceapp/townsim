@@ -1,6 +1,7 @@
 const townConfig = require('../../config/town.json');
 const charsConfig = require('../../config/characters.json');
 const { Character } = require('./character');
+const { isInfant } = require('./development');
 
 class World {
   constructor(config) {
@@ -228,7 +229,7 @@ class World {
 
   getCharactersNear(x, y, radius = 2) {
     return this.characters.filter(c =>
-      c.lifecycle !== 'dependent' && Math.abs(c.pos.x - x) <= radius && Math.abs(c.pos.y - y) <= radius
+      !isInfant(c) && Math.abs(c.pos.x - x) <= radius && Math.abs(c.pos.y - y) <= radius
     );
   }
 

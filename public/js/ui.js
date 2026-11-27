@@ -247,7 +247,7 @@ class UI {
         this.nameCollator.compare(a.name || '', b.name || '') || this.nameCollator.compare(a.id, b.id));
     this.directoryCountEl.textContent = `${filtered.length} of ${characters.length} residents`;
     const byId = new Map(characters.map(c => [c.id, c]));
-    const rosterKey = JSON.stringify(filtered.map(c => [c.id, c.name, c.job, c.color, c.activity,
+    const rosterKey = JSON.stringify(filtered.map(c => [c.id, c.name, c.job, c.lifecycle, c.color, c.activity,
       c.inside, c.activityData?.target, c.activityData?.destination, byId.get(c.activityData?.target)?.name]));
     if (this._lastRosterKey === rosterKey) return;
     this._lastRosterKey = rosterKey;
@@ -256,7 +256,8 @@ class UI {
       const actText = this.getActivityText(char, byId);
       const insideTag = char.inside ? '<span class="char-inside-badge">IN</span>' : '';
       const safeName = this.escapeHtml(char.name || 'Unnamed');
-      const job = this.escapeHtml(char.job || 'Unassigned');
+      const labels = {infant:'Infant / toddler',child:'Child',teen:'Teenager'};
+      const job = this.escapeHtml(labels[char.lifecycle] || char.job || 'Unassigned');
       return `<button type="button" class="char-roster-item" data-char-id="${this.escapeHtml(char.id)}">
         <span class="char-avatar-circle" style="background:${this.escapeHtml(char.color || '#aaa')}">${safeName[0]}</span>
         <span class="char-roster-identity"><span class="char-roster-name">${safeName}</span><span class="char-roster-job">${job}</span></span>
@@ -407,7 +408,9 @@ class UI {
           <div class="char-detail-name">${this.escapeHtml(char.name)}</div>
           <div class="char-detail-job">${this.escapeHtml(char.job)}</div>
           ${Number.isSafeInteger(char.age) && Number.isSafeInteger(char.birthday) ? `<div class="char-detail-job">Age ${char.age} · Birthday: day ${char.birthday} of the year</div>` : ''}
-          ${char.lifecycle === 'dependent' ? '<div class="char-detail-job">Dependent</div>' : ''}
+          <div class="char-detail-job">${this.escapeHtml(({infant:'Infant / toddler',child:'Child',teen:'Teenager',adult:'Adult',dependent:'Infant / toddler'})[char.lifecycle] || 'Adult')}</div>
+          ${char.interest ? `<div class="char-detail-job">Interest: ${this.escapeHtml(char.interest)}</div>` : ''}
+          ${char.aspiration ? `<div class="char-detail-job">Aspiration: ${this.escapeHtml(char.aspiration)}</div>` : ''}
           ${traitsHtml}
         </div>
       </div>

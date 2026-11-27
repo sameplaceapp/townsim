@@ -1006,7 +1006,11 @@ class Renderer {
         this.drawInteractionRing(ctx, sx, sy, ts, char, now);
       }
 
-      this.drawCharacter(ctx, sx, sy, ts, char, pos, now);
+      if (char.lifecycle === 'child' || char.lifecycle === 'teen') {
+        const scale = char.lifecycle === 'child' ? 0.75 : 0.9;
+        ctx.save(); ctx.translate(sx + ts / 2, sy + ts); ctx.scale(scale, scale); ctx.translate(-(sx + ts / 2), -(sy + ts));
+        this.drawCharacter(ctx, sx, sy, ts, char, pos, now); ctx.restore();
+      } else this.drawCharacter(ctx, sx, sy, ts, char, pos, now);
 
       // occasionally spawn ambient emoji particles
       if (char.activity && !['idle', 'goto', 'wander'].includes(char.activity) && Math.random() < 0.015) {

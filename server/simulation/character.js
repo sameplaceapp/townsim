@@ -141,6 +141,8 @@ class Character {
       ...birth,
       lifecycle: this.lifecycle || 'adult',
       parentIds: Array.isArray(this.parentIds) ? [...this.parentIds] : [],
+      interest: this.interest || null,
+      aspiration: this.aspiration || null,
       id: this.id,
       name: this.name,
       job: this.job,

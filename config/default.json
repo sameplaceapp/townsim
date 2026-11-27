@@ -13,6 +13,11 @@
   "calendar": {
     "daysPerYear": 12
   },
+  "lifecycle": {
+    "childAge": 3,
+    "teenAge": 13,
+    "adultAge": 18
+  },
   "reproduction": {
     "minAge": 20,
     "maxGestationalAge": 45,

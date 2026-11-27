@@ -532,7 +532,7 @@ Older versions of Willowbrook cannot preserve household records. Back up the wor
 
 Established adult partners who share a home may decide to have a child. Decisions run once per simulation day, use the existing relationship and family information, and need no LLM. Marriage is not required. The simulation assigns each resident a stable reproductive role derived from their ID (rather than guessing from a name or appearance); compatible roles, age, stable relationships, individual preferences, capacity, and limits are required. Pregnancies and their due days are saved. A due birth waits if the gestational parent or suitable housing is unavailable. Births add a permanent resident with two parent IDs, household membership and a History entry; the child also appears in population counts and welcome-back summaries.
 
-Newborns remain dependents at home and do not work, socialize autonomously, or consume AI decisions. Their age advances normally, but childhood development and transition to adulthood are intentionally not implemented in this feature. The current close-family check uses available parent and grandparent data, not a complete family tree. Do not roll back to an older version without first backing up the world: older versions cannot preserve pregnancy or dependent behavior.
+Newborns remain at home and do not work, socialize autonomously, or consume AI decisions. As they age, they progress through childhood and adulthood as described below. The current close-family check uses available parent and grandparent data, not a complete family tree. Do not roll back to an older version without first backing up the world: older versions cannot preserve pregnancy or dependent behavior.
 
 Defaults are in `config/default.json` under `reproduction`. Docker deployments can override any setting with an environment variable: prefix `REPRODUCTION_` and use uppercase snake case, such as `REPRODUCTION_MAX_POPULATION=40`, `REPRODUCTION_MAX_BIRTHS_PER_YEAR=3`, `REPRODUCTION_GESTATION_DAYS=9`, or `REPRODUCTION_DAILY_CHANCE=0.015`. Daily chance must be between 0 and 1; setting it to 0 stops new pregnancies. Existing pregnancies still progress. The birth-rate limit includes births in the previous calendar year and pending pregnancies, and the population and housing limits reserve room for pending births. Lowering a cap never deletes residents or cancels a pending birth. Inspect `/api/reproduction-status` for pending due days, effective settings and the latest daily reasons that couples or births were deferred. This endpoint contains resident IDs and should be treated like the rest of the private game interface.
 
@@ -545,3 +545,22 @@ fixture_pid=$!
 ```
 
 Choose a different absolute path if the fixture already exists. In Chromium open `http://127.0.0.1:3017` and inspect Alice and Bob. Advance one isolated simulated day with `kill -USR1 "$fixture_pid"`; check `/api/reproduction-status` for a pending birth due on day 5. Stop with `kill -TERM "$fixture_pid"`, restart the same `serve` command in the background and set `fixture_pid=$!` again. Send three more `kill -USR1 "$fixture_pid"` commands, waiting for the terminal confirmation each time. On day 5 the population rises from 12 to 13. Search the directory for the new dependent, inspect their age, parents, and shared household, and open History filtered to Birth. `/api/town-statistics` shows the current population; advance one more day to record the completed day in the historical population chart. Stop and restart the fixture once more to confirm the child and birth record remain. Stop the final server with Ctrl+C or `kill -TERM "$fixture_pid"`. The fixture is paused, binds only to localhost, uses no LLM, and sets shorter timings only for this test.
+
+
+### Childhood and adulthood
+
+Residents born in Willowbrook progress by their existing simulation birthdays: infant/toddler at ages 0–2, child at 3–12, teenager at 13–17 and adult at 18 onward. Children play and socialize near home; teenagers can also visit the park. Their simple routines and friendly interactions are rule-based and do not make AI requests. Minors cannot work, form romantic partnerships, marry or reproduce. Childhood and adulthood milestones are recorded in History. Traits, interests and aspirations develop without changing a resident's ID, family, household or existing relationships.
+
+A newly independent adult stays in the household and starts without an occupation; the game does not yet include a job market or automatically assign them work. Existing saved dependents are migrated to their age-appropriate stage without inventing past milestone events.
+
+The default boundaries are in `config/default.json` under `lifecycle`. For a new world, Docker environment variables `LIFECYCLE_CHILD_AGE`, `LIFECYCLE_TEEN_AGE` and `LIFECYCLE_ADULT_AGE` can override them; the adult boundary must be at least 18 and all boundaries must be increasing. Boundaries are saved with the world, so later configuration changes do not silently change its residents' life stages. Back up the world before upgrading or rolling back; older versions do not understand these stages or their history events.
+
+To test in a disposable world from the repository:
+
+```sh
+node scripts/development-demo.js create /tmp/willowbrook-development-check.json
+node scripts/development-demo.js serve /tmp/willowbrook-development-check.json &
+fixture_pid=$!
+```
+
+Choose a different absolute path if the fixture exists. Open `http://127.0.0.1:3017` in Chromium and search the resident directory for Robin. Their profile starts at age 0 as an infant, with Alice listed as a parent. Run `kill -USR1 "$fixture_pid"` once and wait for confirmation; Robin should be age 3 and a child. Repeat to reach age 13 (teenager), then again to reach age 18 (adult). The fixture advances the existing calendar to each birthday; it does not wait through the intervening real time. Inspect the interest, aspiration, personality and household, and filter History to Life milestones for childhood and adulthood. Stop the server with `kill -TERM "$fixture_pid"`, restart the same `serve` command and verify that Robin and the milestones remain. Stop the restarted process with Ctrl+C. The fixture uses no AI, binds to localhost, refuses to overwrite an existing save and does not touch the real world.
